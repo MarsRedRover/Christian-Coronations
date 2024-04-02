@@ -1,0 +1,6 @@
+english:
+ uncoronated_1_modifier:0 "Uncoronated"
+ uncoronated_2_modifier:0 "Uncoronated"
+ uncoronated_3_modifier:0 "Uncoronated"
+ uncoronated_4_modifier:0 "Uncoronated"
+ uncoronated_5_modifier:0 "Uncoronated"

@@ -1,0 +1,17 @@
+﻿on_game_start = {
+    effect = {
+        every_ruler = {
+            limit = {
+				AND = {
+                    highest_held_title_tier >= tier_kingdom
+                    government_has_flag = government_is_feudal
+                    has_religion = religion:christianity_religion
+                }
+            }
+            add_character_modifier = {
+                modifier = uncoronated_1_modifier
+                years = 2
+			}
+        }
+    }
+}

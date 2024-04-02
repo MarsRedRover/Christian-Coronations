@@ -1,0 +1,17 @@
+﻿# Called every Jan 1st
+yearly_global_pulse = {
+    effect = {
+        every_ruler = {
+            limit = {
+				AND = {
+                    highest_held_title_tier >= tier_kingdom
+                    government_has_flag = government_is_feudal
+                    has_religion = religion:christianity_religion
+                }
+            }
+            if = {
+                has_modifier = { }
+            }
+            }
+            }
+            }
