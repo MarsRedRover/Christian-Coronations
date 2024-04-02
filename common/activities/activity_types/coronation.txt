@@ -1,541 +1,101 @@
-﻿activity_coronation = {
+﻿@weight_up_ai_select_province_small = 10
+@weight_up_ai_select_province_medium = 50
+@weight_up_ai_select_province_large = 250
+@weight_up_ai_select_province_massive = 500
+
+@coronation_cost_gold_low = tiny_gold_value
+@coronation_cost_gold_medium = medium_gold_value
+@coronation_cost_gold_high = major_gold_value
+
+activity_coronation = {
 	is_shown = {
 		highest_held_title_tier >= tier_kingdom
 		is_landed = yes
 		trigger_if = {
 			limit = {
-				# Is this needed? What changes does this do?
 				is_ai = yes
 			}
 			is_at_war = no
+			short_term_gold >= coronation_activity_cost
 		}
+		has_ce1_dlc_trigger = yes
 	}
 
 	can_start_showing_failures_only = {
-		is_available_adult = yes
+		is_available = yes
+		trigger_if = {
+			limit = {
+				is_ai = no
+			}
+			custom_tooltip = {
+				text = has_someone_selected_to_bury
+				exists = scope:body_to_bury
+			}
+		}
+		trigger_if = {
+			limit = {
+				is_ai = yes
+			}
+			has_available_funeral_target = yes
+		}
 	}
 
-	# Require a betrothal for player to start planning a wedding
-	can_always_plan = yes
+	can_start = {
+		custom_tooltip = {
+			text = has_someone_to_bury_tt
+			has_available_funeral_target = yes
+		}
+	}
 
 	is_valid = {
 		scope:host = {
 			is_alive = yes
-			is_capable_adult = yes
 			is_imprisoned = no
 			is_landed = yes
-			OR = {
-				has_character_modifier = uncoronated_1_modifier
-				has_character_modifier = uncoronated_2_modifier
-				has_character_modifier = uncoronated_3_modifier
-				has_character_modifier = uncoronated_4_modifier
-				has_character_modifier = uncoronated_5_modifier
-			}
 			NOT = { is_incapable = yes }
 		}
-	}
-
-	on_invalidated = {
-		scope:host ?= { save_scope_as = previous_host }
-		scope:activity.special_guest:spouse_1 ?= { save_scope_as = spouse_1 }
-		scope:activity.special_guest:spouse_2 ?= { save_scope_as = spouse_2 }
-		# Set up the refund
-		scope:previous_host = {
-			set_variable = {
-				name = gwedding_gold_recoup_value
-				value = {
-					value = 0
-					# For a base, add the total pot spent.
-					add = scope:activity.var:gwedding_refund_pot
-					# Then revise it down a little to account for some costs being irredeemable.
-					multiply = 0.75
-				}
-			}
-		}
-		
-		if = {
+		# If no one shows up
+		trigger_if = {
 			limit = {
-				scope:host = { has_trait = incapable }
+				is_current_phase_active = yes
 			}
-			scope:activity = {
-				activity_type = { save_scope_as = activity_type }
-			}
-			scope:host = {
-				trigger_event = activity_system.0330
-			}
-			every_attending_character = {
-				limit = { NOT = { this = scope:host } }
-				trigger_event = activity_system.0331
-			}
-		}
-
-		# Only the player as spouse_1 can say no at the altar, no reason to have events to notify the AI
-		else_if = {
-			limit = {
-				scope:activity = {
-					has_variable = wedding_invalidated_said_no
-				}
-				exists = scope:spouse_1
-				scope:spouse_1 = { is_alive = yes }
-			}		
-			scope:spouse_1 = { trigger_event = ep2_wedding.0152 }
-		}
-
-		# One of the spouses was taken prisoner along the way
-		else_if = {
-			limit = {
-				OR = {
-					scope:spouse_1 ?= { is_imprisoned = yes }
-					scope:spouse_2 ?= { is_imprisoned = yes }
-				}
-			}
-			if = {
-				limit = {
-					scope:spouse_1 = { is_imprisoned = yes }
-				}
-				scope:spouse_1 = { save_scope_as = prisoner_spouse }
-				scope:spouse_2 = { save_scope_as = free_spouse }
-			}
-			else = {
-				scope:spouse_2 = { save_scope_as = prisoner_spouse }
-				scope:spouse_1 = { save_scope_as = free_spouse }
-			}
-			scope:prisoner_spouse = { trigger_event = ep2_wedding.0920 }
-			every_attending_character = {
-				limit = {
-					NOT = { this = scope:prisoner_spouse }
-				}
-				trigger_event = ep2_wedding.0921
-			}
-		}
-
-		# Host becomes unlanded
-		else_if = {
-			limit = {
-				scope:host = { is_landed = no }
-			}
-			scope:activity = {
-				activity_type = { save_scope_as = activity_type }
-			}
-			every_attending_character = {
-				trigger_event = activity_system.0320
-			}
-		}
-
-		# The new host doesn't meet the tier requirements
-		else_if = {
-			limit = {
-				scope:host = { highest_held_title_tier < tier_county }
-			}
-			every_attending_character = {
-				trigger_event = ep2_wedding.0999
-			}
-		}
-
-		# The activity failed because one of the spouses died
-		else_if = {
-			limit = {
-				OR = {
-					scope:activity.special_guest:spouse_1 = {
-						is_alive = no
-					}
-					AND = {
-						scope:activity.var:spouse_2_var ?= {
-							is_alive = no
-						}
-						scope:activity = { #you're not in a murder wedding
-							has_activity_option = { 
-								category = special_type 
-								option = wedding_type_normal
-							}
-						}
-					}
-				}
-			}
-			if = {
-				limit = {
-					scope:previous_host = {
-						is_alive = yes
-					}
-				}
-				scope:previous_host = {
-					# Set up the refund
-					set_variable = {
-						name = gwedding_gold_recoup_value
-						value = {
-							value = 0
-							# For a base, add the total pot spent.
-							add = scope:activity.var:gwedding_refund_pot
-							# Then revise it down a little to account for some costs being irredeemable.
-							multiply = 0.75
-						}
-					}
-				}
-			}
-			# The host was one of the spouses and died
-			else = {
-				scope:previous_host.player_heir = {
-					# Set up the refund
-					set_variable = {
-						name = gwedding_gold_recoup_value
-						value = {
-							value = 0
-							# For a base, add the total pot spent.
-							add = scope:activity.var:gwedding_refund_pot
-							# Then revise it down a little to account for some costs being irredeemable.
-							multiply = 0.75
-						}
-					}
-				}
-			}
-			# Special event for the surviving spouse
-			if = {
-				limit = {
-					scope:spouse_1 = {
-						is_alive = yes
-					}
-				}
-				scope:spouse_2 = { save_scope_as = dead_spouse }
-				scope:spouse_1 = {
-					trigger_event = ep2_wedding.0910
-				}
-			}
-			else_if = {
-				limit = {
-					scope:spouse_1 = {
-						is_alive = no
-					}
-				}
-				scope:spouse_1 = { save_scope_as = dead_spouse }
-				scope:spouse_2 = {
-					trigger_event = ep2_wedding.0910
-				}
-			}
-			# Event for all other attending characters, including the host
-			scope:activity = {
-				every_attending_character = {
-					limit = {
-						NOR = {
-							this = scope:spouse_1
-							this = scope:spouse_2
-						}
-					}
-					trigger_event = ep2_wedding.0900
-				}
-			}
-			# If the host/spouse died, notify the heir if somewhere else
-			if = {
-				limit = {
-					scope:previous_host = {
-						is_alive = no
-						player_heir = {
-							NOT = { involved_activity ?= scope:activity }
-						}
-					}
-				}
-				scope:previous_host.player_heir = {
-					trigger_event = ep2_wedding.0915
-				}
-			}
-		}
-		# Emergency Invalidation: one of the spouses is not coming for some reason
-		else_if = {
-			limit = {
-				scope:activity = {
-					NOT = { has_variable = activity_travel_countdown }
-				}
-				scope:activity.var:spouse_2_var ?= {
-					NOR = {
-						is_ai = yes
-						involved_activity ?= scope:activity
-						location = scope:activity.activity_location
-						current_travel_plan ?= {
-							travel_plan_activity = scope:activity
-						}
-					}
-				}
-			}
-			scope:activity.var:spouse_2_var = { save_scope_as = missing_spouse }
-			scope:activity.special_guest:spouse_1 = { save_scope_as = other_spouse }
-			scope:activity = {
-				every_attending_character = {
-					trigger_event = ep2_wedding.0997
-				}
-			}
-		}
-		# Fallback Invalidation
-		else = {
-			scope:activity = {
-				every_attending_character = {
-					trigger_event = ep2_wedding.0998
-				}
-			}
-		}
-		#Accolades' modifiers' removal
-		if = {
-			limit = {
-				scope:activity = {
-					any_attending_character = {
-						has_character_modifier = accolade_charmer_party_modifier
-					}
-				}
-			}
-			scope:activity = {
-				every_attending_character = {
-					limit = {
-						has_character_modifier = accolade_charmer_party_modifier
-					}
-					remove_character_modifier = accolade_charmer_party_modifier
-				}
-			}
-		}
-		if = {
-			limit = {
-				scope:activity = {
-					any_attending_character = {
-						has_character_modifier = accolade_charmer_party_high_modifier
-					}
-				}
-			}
-			scope:activity = {
-				every_attending_character = {
-					limit = {
-						has_character_modifier = accolade_charmer_party_high_modifier
-					}
-					remove_character_modifier = accolade_charmer_party_high_modifier
-				}
-			}
-		}
-		if = { # No one shows up
-			limit = {
-				has_attending_activity_guests = no
-			}
-			scope:activity = {
-				activity_type = { save_scope_as = activity_type }
-				activity_location = { save_scope_as = location }
-			}
-			scope:host = { trigger_event = activity_system.0100 }
-		}
-		#Get rid of temporary modifiers
-		if = {
-			limit = {
-				scope:activity = {
-					any_attending_character = {
-						has_character_modifier = wedding_jitters
-					}
-				}
-			}
-			scope:activity = {
-				every_attending_character = {
-					limit = {
-						has_character_modifier = wedding_jitters
-					}
-					remove_character_modifier = wedding_jitters
-				}
-			}
-		}
-		if = {
-			limit = {
-				scope:activity = {
-					any_attending_character = {
-						has_character_modifier = wedding_confident_groom
-					}
-				}
-			}
-			scope:activity = {
-				every_attending_character = {
-					limit = {
-						has_character_modifier = wedding_confident_groom
-					}
-					remove_character_modifier = wedding_confident_groom
-				}
-			}
-		}
-		if = {
-			limit = {
-				scope:activity = {
-					any_attending_character = {
-						has_character_modifier = wedding_confident_bride
-					}
-				}
-			}
-			scope:activity = {
-				every_attending_character = {
-					limit = {
-						has_character_modifier = wedding_confident_bride
-					}
-					remove_character_modifier = wedding_confident_bride
-				}
-			}
+			has_attending_activity_guests = yes
 		}
 	}
-
+	
 	on_host_death = {
-		every_attending_character = {
-			limit = { is_alive = yes }
-			trigger_event = {
-				id = feast.5003
-				days = 1 # So you don't get spammed
+		if = { # Transfer hostly duties to the heir if possible
+			limit = {
+				exists = scope:host.player_heir
+				any_attending_character = { this = scope:host.player_heir }
 			}
-		}
-		# Code sends your entourage home on invalidated
-		scope:activity.var:host_var = {
-			# Saving the title for loc
-			primary_title = { save_scope_as = host_title }
-			# Inform your heir if you have one
-			player_heir ?= {
+			scope:host.player_heir = { save_scope_as = new_host }
+			#Also inherit the travel plan
+			if = {
+				limit = {
+					scope:host.current_travel_plan = {
+						any_entourage_character = { this = scope:new_host }
+					}
+				}
+				scope:host.current_travel_plan = { set_travel_plan_owner = scope:new_host }
+			}
+			scope:activity = { set_activity_host = scope:new_host }
+			scope:new_host = {
+				primary_title = { save_scope_as = host_title }
 				trigger_event = {
-					id = feast.0800
+					id = funeral.0002
 					days = 1
 				}
 			}
 		}
-	}
-
-	# desc is only shown in debug AI watch window
-	ai_will_do = {
-		value = 0
-		add = {
-			value = 1000
-			desc = "Wedding functional, always make weddings!"
-		}
-	}
-
-	ai_check_interval = 4
-
-	ai_will_select_province = {
-		value = 0
-		add = {
-			value = 30
-			desc = "Base test value"
-		}
-		# Buildings
-		if = {
-			limit = { has_building = royal_garden_01 }
-			add = {
-				value = 30
-				desc = "Royal Garden"
+		else = { # Otherwise, tell everyone to go home
+			every_attending_character = {
+				limit = { is_alive = yes }
+				trigger_event = {
+					id = funeral.0001
+					days = 1 # So you don't get spammed
+				}
 			}
-		}
-		else_if = {
-			limit = { has_building = royal_garden_02 }
-			add = {
-				value = 50
-				desc = "Royal Garden"
-			}
-		}
-		else_if = {
-			limit = { has_building = royal_garden_03 }
-			add = {
-				value = 80
-				desc = "Royal Garden"
-			}
-		}
-		if = {
-			limit = { has_building = leisure_palace_01 }
-			add = {
-				value = 50
-				desc = "Leisure Palace"
-			}
-		}
-		else_if = {
-			limit = { has_building = leisure_palace_02 }
-			add = {
-				value = 80
-				desc = "Leisure Palace"
-			}
-		}
-		else_if = {
-			limit = { has_building = leisure_palace_03 }
-			add = {
-				value = 100
-				desc = "Leisure Palace"
-			}
-		}
-		if = {
-			limit = { barony = { is_holy_site_of = scope:host.faith } }
-			add = {
-				value = 50
-				desc = "Holy Site"
-			}
-		}
-	}
-
-	max_province_icons = 5
-
-	province_score = {
-		value = 75
-		# Capital
-		if = {
-			limit = {
-				this = scope:host.capital_province
-			}
-			add = 75
-		}
-		# Buildings
-		if = {
-			limit = { has_building = royal_garden_01 }
-			add = 50
-		}
-		else_if = {
-			limit = { has_building = royal_garden_02 }
-			add = 75
-		}
-		else_if = {
-			limit = { has_building = royal_garden_03 }
-			add = 100
-		}
-		if = {
-			limit = { has_building = leisure_palace_01 }
-			add = 75
-		}
-		else_if = {
-			limit = { has_building = leisure_palace_02 }
-			add = 100
-		}
-		else_if = {
-			limit = { has_building = leisure_palace_03 }
-			add = 125
-		}
-		# Holy Site
-		if = {
-			limit = { barony = { is_holy_site_of = scope:host.faith } }
-			add = 75
-		}
-	}
-
-	province_description = {
-		triggered_desc = {
-			trigger = { this = scope:host.capital_province }
-			desc = province_desc_wedding_capital
-		}
-		triggered_desc = {
-			trigger = { has_building = royal_garden_01 }
-			desc = province_desc_wedding_gardens
-		}
-		triggered_desc = {
-			trigger = { has_building = royal_garden_02 }
-			desc = province_desc_wedding_gardens_2
-		}
-		triggered_desc = {
-			trigger = { has_building = royal_garden_03 }
-			desc = province_desc_wedding_gardens_3
-		}
-		triggered_desc = {
-			trigger = { has_building = leisure_palace_01 }
-			desc = province_desc_wedding_palace
-		}
-		triggered_desc = {
-			trigger = { has_building = leisure_palace_02 }
-			desc = province_desc_wedding_palace_2
-		}
-		triggered_desc = {
-			trigger = { has_building = leisure_palace_03 }
-			desc = province_desc_wedding_palace_3
-		}
-		triggered_desc = {
-			trigger = { barony = { is_holy_site_of = scope:host.faith } }
-			desc = province_desc_wedding_holy_site
 		}
 	}
 
@@ -546,46 +106,564 @@
 	is_grand_activity = no
 	is_single_location = yes
 
-	max_guest_arrival_delay_time = { months = 6 }
-
-	province_filter = domain
+	province_filter = capital
 	ai_province_filter = capital
+
+	max_route_deviation_mult = 2.0
+
+	is_location_valid = {
+		has_holding = yes
+	}
+
+	province_description = {
+		desc = activity_coronation_province_desc
+		# +++ / triple plus good
+		# Triple good / +++
+		triggered_desc = { # Has a big cool temple of your faith
+			trigger = {
+				barony = {
+					is_holy_site_of = scope:host.faith
+				}
+				has_holy_building = yes
+			}
+			desc = activity_funeral_major_religious_building
+		}
+		triggered_desc = { # Has a tower of silence
+			trigger = {
+				has_building_or_higher = tower_of_silence_01
+			}
+			desc = activity_funeral_tos
+		}
+		# Double good / ++
+		triggered_desc = {
+			trigger = {
+				barony = {
+					is_holy_site_of = scope:host.faith
+				}
+			}
+			desc = activity_funeral_holy_site
+		}
+		# Things your religion values
+		triggered_desc = {
+			trigger = {
+				scope:host.faith = { has_doctrine_parameter = sky_burials_active }
+				is_mountainous_trigger = yes
+			}
+			desc = activity_funeral_mountain
+		}
+		# Good / +
+		triggered_desc = {
+			trigger = {
+				has_building_or_higher = temple_01
+				faith.religion = scope:host.faith.religion
+			}
+			desc = activity_funeral_temple
+		}
+	}
+
+	max_province_icons = 1
+
+	province_score = {
+		value = 0
+		# BUILDINGS
+		# Triple good / +++
+		if = { # Has a big cool temple of your faith
+			limit = {
+				barony = {
+					is_holy_site_of = scope:host.faith
+				}
+				has_holy_building = yes
+			}
+			add = 100
+		}
+		if = { # Has a tower of silence
+			limit = {
+				has_building_or_higher = tower_of_silence_01
+			}
+			add = 100
+		}
+		# Double good / ++
+		if = {
+			limit = {
+				barony = {
+					is_holy_site_of = scope:host.faith
+				}
+			}
+			add = 50
+		}
+		# Things your religion values
+		if = {
+			limit = {
+				scope:host.faith = { has_doctrine_parameter = sky_burials_active }
+				is_mountainous_trigger = yes
+			}
+			add = 50
+		}
+		# Good / +
+		if = {
+			limit = {
+				has_building_or_higher = temple_01
+				faith.religion = scope:host.faith.religion
+			}
+			add = 25
+		}
+	}
+
+	cooldown = { years = standard_funeral_cooldown_time }
+
+	# desc is only shown in debug AI watch window
+	ai_will_do = {
+		add = {
+			value = 30
+			desc = "Base"
+		}
+		add = {
+			value = ai_greed
+			multiply = -0.25
+			desc = "ai_greed"
+		}
+		add = {
+			value = ai_sociability
+			multiply = 0.5
+			desc = "ai_sociability"
+		}
+		if = {
+			limit = {
+				ai_energy < 0
+			}
+			add = {
+				add = ai_energy
+				desc = "ai_energy"
+			}
+		}
+		if = {
+			limit = { has_trait = gregarious }
+			add = {
+				value = 10
+				desc = "Is gregarious"
+			}
+		}
+		if = {
+			limit = { has_trait = shy }
+			add = {
+				value = -30
+				desc = "Is shy"
+			}
+		}
+		if = {
+			limit = { has_trait = inappetetic }
+			add = {
+				value = -30
+				desc = "Is inappetetic"
+			}
+		}
+		if = {
+			limit = { has_trait = reclusive }
+			add = {
+				value = -30
+				desc = "Is reclusive"
+			}
+		}
+		if = {
+			limit = {
+				short_term_gold >= funeral_activity_cost
+				short_term_gold >= major_gold_value
+			}
+			add = {
+				value = 30
+				desc = "Got gold to burn"
+			}
+		}
+		if = {
+			limit = { has_trait = lifestyle_reveler }
+			add = {
+				value = 20
+				desc = "Is Reveler"
+			}
+		}
+		if = {
+			limit = {
+				has_royal_court = yes 
+				has_court_type = court_intrigue
+				}
+			add = {
+				value = 10
+				desc = "Intrigue court trait"
+			}
+		}
+		if = {
+			limit = { has_trait = comfort_eater }
+			add = {
+				value = 10
+				desc = "Is Comfort Eater"
+			}
+		}
+		if = {
+			limit = { has_trait = drunkard }
+			add = {
+				value = 10
+				desc = "Is Drunkard"
+			}
+		}
+		if = {
+			limit = { has_trait = gluttonous }
+			add = {
+				value = 10
+				desc = "Is Gluttonous"
+			}
+		}
+		if = {
+			limit = { has_trait = hashishiyah }
+			add = {
+				value = 10
+				desc = "Has Munchies"
+			}
+		}
+		# Stress
+		if = { # Low Stress
+			limit = {
+				stress >= lower_than_baseline_stress
+				NOT = { has_trait = shy }
+			}
+			add = {
+				value = 10
+				desc = "lower_than_baseline_stress"
+			}
+		}
+		if = { # High Stress
+			limit = {
+				stress >= higher_than_baseline_stress
+				NOT = { has_trait = shy }
+			}
+			add = {
+				value = 10
+				desc = "higher_than_baseline_stress"
+			}
+		}
+		if = { # Very High Stress
+			limit = {
+				stress >= high_stress
+				NOT = { has_trait = shy }
+			}
+			add = {
+				value = 10
+				desc = "high_stress"
+			}
+		}
+		if = {
+			limit = {
+				culture = {
+					has_cultural_tradition = tradition_culinary_art
+				}
+			}
+			add = {
+				value = 20
+				desc = "Host culture has Culinary Artists Cultural Tradition"
+			}
+		}
+		if = {
+			limit = {
+				faith = { has_doctrine = tenet_ritual_celebrations }
+			}
+			add = {
+				value = 35
+				desc = "Host culture has Ritual Celebrations Cultural Tradition"
+			}
+		}
+		if = {
+			limit = {
+				faith = { has_doctrine = tenet_hedonistic }
+			}
+			add = {
+				value = 35
+				desc = "Host faith has Hedonistic Tenet"
+			}
+		}
+		if = {
+			limit = {
+				host.faith = {
+					has_doctrine = tenet_asceticism
+				}
+			}
+			add = {
+				value = -20
+				desc = "Host faith has Asceticism tenet"
+			}
+		}
+		if = {
+			limit = {
+				is_independent_ruler = no
+				has_vassal_stance = courtly
+			}
+			add = {
+				value = 10
+				desc = courtly
+			}
+		}
+		if = {
+			limit = { ai_has_warlike_personality = yes }
+			add = {
+				value = -30
+				desc = "Warlike"
+			}
+		}
+		if = {
+			limit = {
+				ai_has_warlike_personality = yes
+				war_chest_gold < war_chest_gold_maximum
+			}
+			multiply = {
+				value = 0.25
+				desc = "Warlike"
+			}
+		}
+		# Economic Archetype
+		if = { # Too busy booming the economy
+			limit = {
+				OR = {
+					ai_has_economical_boom_personality = yes
+					has_character_flag = ai_boom
+				}
+			}
+			add = {
+				value = -200
+				desc = "Builder"
+			}
+		}
+		# Legitimacy
+		if = {
+			limit = {
+				is_valid_for_legitimacy_change = yes
+			}
+			if = { # Low Legitimacy
+				limit = {
+					OR = {
+						legitimacy_level = 1
+						legitimacy_level = 2
+					}
+				}
+				add = {
+					value = 20
+					desc = "low_legitimacy"
+				}
+			}
+			if = { # Very Low Legitimacy
+				limit = {
+					legitimacy_level = 0
+				}
+				add = {
+					value = 30
+					desc = "low_legitimacy"
+				}
+			}
+		}
+		# Plague
+		if = {
+			limit = {
+				any_sub_realm_county = {
+					any_county_province = {
+						any_province_epidemic = {
+							count >= 1
+							outbreak_intensity < apocalyptic
+						}
+					}
+				}
+				would_follow_social_distancing_value >= -1
+			}
+			add = {
+				value = -60
+				desc = "Plague in Realm"
+			}
+		}
+		else_if = {
+			limit = {
+				any_realm_county = {
+					any_county_province = {
+						any_province_epidemic = {
+							count >= 1
+							outbreak_intensity < apocalyptic
+						}
+					}
+				}
+				would_follow_social_distancing_value >= -1
+			}
+			add = {
+				value = -40
+				desc = "Plague in Top Realm"
+			}
+		}
+		if = {
+			limit = {
+				any_sub_realm_county = {
+					any_county_province = {
+						any_province_epidemic = {
+							count >= 1
+							outbreak_intensity = apocalyptic
+						}
+					}
+				}
+			}
+			add = {
+				value = -200
+				desc = "Apocalyptic Plague in Realm"
+			}
+		}
+		else_if = {
+			limit = {
+				any_realm_county = {
+					any_county_province = {
+						any_province_epidemic = {
+							count >= 1
+							outbreak_intensity = apocalyptic
+						}
+					}
+				}
+			}
+			add = {
+				value = -100
+				desc = "Apocalyptic Plague in Top Realm"
+			}
+		}
+	}
+
+	###################
+	# GUEST HANDLING
+	###################
+
+	max_guests = 40
+
+	guest_invite_rules = {
+		rules = {
+			# Relations.
+			2 = activity_invite_rule_lovers
+			2 = activity_invite_rule_rivals_if_appropriate
+
+			# Family.
+			3 = activity_invite_rule_extended_family
+
+			# Magnates.
+			4 = activity_invite_neighbouring_rulers
+
+			# Misc landless.
+			5 = activity_invite_rule_knights
+
+			# MP 
+			6 = activity_invite_mp
+		}
+		defaults = {
+			1 = activity_invite_rule_friends
+			1 = activity_invite_rule_close_family
+			1 = activity_invite_rule_liege
+			1 = activity_invite_rule_vassals
+			2 = activity_invite_rule_fellow_vassals
+			3 = activity_invite_rule_courtiers
+			4 = activity_invite_rule_guests
+			1 = activity_invite_spouses
+		}
+	}
+
+	can_be_activity_guest = {
+		is_healthy = yes
+		in_diplomatic_range = scope:host
+	}
+
+	host_intents = {
+		intents = { mourn_intent murder_attendee_intent woo_attendee_intent befriend_attendee_intent legitimacy_intent }
+		default = mourn_intent
+	}
+
+	guest_intents = {
+		intents = { mourn_intent murder_attendee_intent woo_attendee_intent befriend_attendee_intent legitimacy_intent }
+		default = mourn_intent
+	}
+
+	guest_join_chance = {
+		base = 10
+		base_activity_modifier = yes
+
+		# Scripted Modifiers
+		activity_guest_shared_ai_accept_modifier = yes 
+	}
+
+	travel_entourage_selection = {
+		weight = {
+			value = standard_travel_entourage_additions
+			if = {
+				limit = {
+					OR = {
+						has_trait = gregarious
+						has_trait = drunkard
+						has_trait = hashishiyah
+						has_trait = gluttonous
+						has_trait = comfort_eater
+					}
+				}
+				add = 10
+			}
+		}
+		max = 18
+		invite_rule_order = 3
+	}
 
 	cost = {
 		gold = {
 			add = {
+				value = 0
+				desc = funeral_activity_cost_desc
 				add = {
-					value = root.base_wedding_cost
-					desc = WEDDING_BASE_COST
+					value = funeral_activity_cost
+					desc = funeral_activity_cost_desc
 				}
 				add = {
-					value = root.base_wedding_cost
+					value = funeral_activity_cost
 					multiply = activity_cost_scale_by_era
-					subtract = root.base_wedding_cost
-					desc = activity_cost_scale_by_era_desc 
+					subtract = funeral_activity_cost
+					desc = activity_cost_scale_by_era_desc
 				}
 				if = {
 					limit = {
-						root.dynasty ?= { has_dynasty_perk = ep2_activities_legacy_2 }
-					}
-					add = {
-						value = root.base_wedding_cost
-						multiply = activity_cost_scale_by_era
-						multiply = ep2_activities_legacy_2_grand_weddings_discount_value
-						multiply = -1
-						desc = ep2_activities_legacy_2_name
-					}
-				}
-				# Some people get one free.
-				if = {
-					limit = {
-						root = {
-							factor_zero_if_entitled_to_freebie_activity_trigger = yes
+						scope:province ?= {
+							OR = {
+								has_building_or_higher = holy_site_cathedral_01
+								has_building_or_higher = holy_site_mosque_01
+								has_building_or_higher = holy_site_pagan_grand_temple_01
+								has_building_or_higher = holy_site_indian_grand_temple_01
+								has_building_or_higher = holy_site_other_grand_temple_01
+								has_building_or_higher = tower_of_silence_01
+							}
 						}
 					}
-					multiply = {
-						value = 0
-						desc = ep2_activities_legacy_5_name
+					add = {
+						value = funeral_activity_cost
+						multiply = funeral_activity_cost_increase_max
+						subtract = funeral_activity_cost
+						desc = funeral_cost_increase_great_temple
+					}
+				}
+				if = {
+					limit = {
+						root ?= {
+							faith = { has_doctrine_parameter = mummification_funeral }
+						}
+					}
+					add = {
+						value = funeral_activity_cost
+						multiply = 2
+						subtract = funeral_activity_cost
+						desc = funeral_cost_increase_mummification
+					}
+				}
+				if = {
+					limit = {
+						root ?= {
+							faith = { has_doctrine_parameter = cremation_funeral }
+						}
+					}
+					add = {
+						value = funeral_activity_cost
+						multiply = funeral_activity_cost_discount_max
+						subtract = funeral_activity_cost
+						desc = funeral_cost_discount_cremation
 					}
 				}
 			}
@@ -595,1817 +673,49 @@
 	ui_predicted_cost = {
 		# All costs are balanced on County/Early Era starting point
 		gold = {
-			# Base Cost
-			add = {
-				value = root.base_wedding_cost
-				desc = WEDDING_BASE_COST
-				# Scale by Era
-				multiply = {
-					value = activity_cost_scale_by_era
-					desc = activity_cost_scale_by_era_desc
-				}
-				if = {
-					limit = {
-						root.dynasty ?= { has_dynasty_perk = ep2_activities_legacy_2 }
-					}
-					multiply = {
-						value = ep2_activities_legacy_2_grand_weddings_discount_value
-						desc = ep2_activities_legacy_track
-					}
-					# Some people get one free.
-					if = {
-						limit = { factor_zero_if_entitled_to_freebie_activity_trigger = yes }
-						multiply = 0
-					}
-				}
-				# OPTIONS
-				add = { # Entertainment
-					add = { # Calculate the average of the three option costs
-						value = 0
-						add = 20 # Bad Option Cost
-						add = 60 # Normal Option Cost
-						add = 180 # Good Option Cost
-						# Divide by the total number of option levels so we get an average option cost
-						divide = 3
-						# Scale option costs by era
-						multiply = activity_cost_scale_by_era
-					}
-					if = {
-						limit = {
-							root.dynasty ?= { has_dynasty_perk = ep2_activities_legacy_2 }
-						}
-						multiply = {
-							value = ep2_activities_legacy_2_grand_weddings_discount_value
-							desc = ep2_activities_legacy_track
-						}
-						# Some people get one free.
-						if = {
-							limit = { factor_zero_if_entitled_to_freebie_activity_trigger = yes }
-							multiply = 0
-						}
-					}
-				}
-				add = { # Food
-					value = { # Calculate the average of the three option costs
-						value = 0
-						add = 20 # Bad Option Cost
-						add = 60 # Normal Option Cost
-						add = 180 # Good Option Cost
-						# Scale option costs by era
-						multiply = activity_cost_scale_by_era
-						# Divide by the total number of option levels so we get an average option cost
-						divide = 3
-					}
-					if = {
-						limit = {
-							root.dynasty ?= { has_dynasty_perk = ep2_activities_legacy_2 }
-						}
-						multiply = {
-							value = ep2_activities_legacy_2_grand_weddings_discount_value
-							desc = ep2_activities_legacy_track
-						}
-						# Some people get one free.
-						if = {
-							limit = { factor_zero_if_entitled_to_freebie_activity_trigger = yes }
-							multiply = 0
-						}
-					}
-				}
-				add = { # Decoration
-					value = { # Calculate the average of the three option costs
-						value = 0
-						add = 40 # Bad Option Cost
-						add = 120 # Normal Option Cost
-						add = 360 # Good Option Cost
-						# Scale option costs by era
-						multiply = activity_cost_scale_by_era
-						# Divide by the total number of option levels so we get an average option cost
-						divide = 3
-					}
-					if = {
-						limit = {
-							root.dynasty ?= { has_dynasty_perk = ep2_activities_legacy_2 }
-						}
-						multiply = {
-							value = ep2_activities_legacy_2_grand_weddings_discount_value
-							desc = ep2_activities_legacy_track
-						}
-						# Some people get one free.
-						if = {
-							limit = { factor_zero_if_entitled_to_freebie_activity_trigger = yes }
-							multiply = 0
-						}
-					}
-				}
-				# Make it a multiple of 5 (rounded up)
-				divide = 5
-				ceiling = yes
-				multiply = 5
+			add = { # Base Cost, scaled by era
+				value = funeral_activity_cost
+				multiply = activity_cost_scale_by_era
 			}
-		}
-	}
-
-	###################
-	# OPTIONS
-	###################
-
-	options = {
-		# Wedding Types
-		special_type = {
-			# Regular Wedding
-			wedding_type_normal = {
-				default = yes
-				ai_will_do = {
-					value = 100
+			add = { # Ceremony 
+				value = 0 # Bad Option Cost
+				add = 10 # Normal Option Cost
+				add = 35 # Good Option Cost
+				# Scale the sum of the options by era and tier
+				add = {
+					value = 45
+					multiply = activity_cost_scale_by_tier
+				}
+				add = {
+					value = 45
+					multiply = activity_cost_scale_by_era
+				}
+				# Divide by 3 (num of levels for this option) so we get the average option cost
+				divide = 3
+			}
+			save_temporary_value_as = pre_discount_funeral_cost_ui
+			if = {
+				limit = {
+					dynasty ?= {
+						has_dynasty_perk = law_legacy_1
+					}
+				}
+				subtract = {
+					value = scope:pre_discount_funeral_cost_ui
+					multiply = law_legacy_cost_reduction_mult
 				}
 			}
-			# Bloody Wedding
-			wedding_type_bloody = {
-				cost = {
-					gold = {
-						add = {
-							add = {
-								value = root.base_wedding_cost
-								multiply = 4
-								desc = bloody_wedding_activity_cost_desc
-							}
-							add = {
-								value = root.base_wedding_cost
-								multiply = activity_cost_scale_by_era
-								subtract = root.base_wedding_cost
-								desc = activity_cost_scale_by_era_desc
-							}
-							if = {
-								limit = {
-									dynasty ?= { has_dynasty_perk = ep2_activities_legacy_2 }
-								}
-								add = {
-									value = root.base_wedding_cost
-									multiply = activity_cost_scale_by_era
-									multiply = ep2_activities_legacy_2_grand_weddings_discount_value
-									multiply = -1
-									desc = ep2_activities_legacy_2_name
-								}
-							}
-							# Some people get one free.
-							if = {
-								limit = { factor_zero_if_entitled_to_freebie_activity_trigger = yes }
-								multiply = 0
-							}
-						}
-						if = {
-							limit = {
-								root = { is_ai = yes }
-							}
-							multiply = 0
-						}
-					}
-				}
-				is_shown = {}
-				
-				is_valid = {
-					# Do you have the skill to pull it off?
-					has_perk = accomplished_forger_perk
-					custom_tooltip = {
-						text = wedding_type_murder_valid_tt
-						NOT = { has_variable = recent_red_wedding_var } #15 years cooldown
-					}
-				}
-				blocked_intents = { murder_attendee_intent woo_attendee_intent diplomatic_intent matchmaking_intent }
-				
-				ai_will_do = {
-					value = 0
-					if = {
-						limit = {
-							has_trait = torturer
-							NOT = { has_trait = zealous }
-							can_make_expensive_purchase_trigger = { PRICE = real_wedding_cost_root_scope }
-						}
-						add = 30
-					}
-					if = {
-						limit = {
-							OR = {
-								has_trait = callous
-								has_trait = sadistic
-								has_trait = arbitrary
-								has_trait = vengeful
-							}
-							NOT = { has_trait = zealous }
-							can_make_expensive_purchase_trigger = { PRICE = real_wedding_cost_root_scope_plus_50 }
-						}
-						add = 15
-					}
-					if = {
-						limit = {
-							OR = {
-								has_trait = just
-								has_trait = honest
-								has_trait = compassionate
-								has_trait = generous
-								has_trait = forgiving
-								has_trait = calm
-								has_trait = zealous
-							}
-						}
-						subtract = 50
-					}
-					if = {
-						limit = {
-							this = faith.religious_head
-							NOT = { has_trait = torturer }
-							faith = {
-								NOR = {
-									has_doctrine_parameter = gruesome_festivals_active
-									has_doctrine_parameter = human_sacrifice_active
-								}
-							}
-						}
-						add = -100
-					}
-					if = {
-						limit = {
-							this = faith.religious_head
-							NOT = { has_trait = compassionate }
-							faith = {
-								OR = {
-									has_doctrine_parameter = gruesome_festivals_active
-									has_doctrine_parameter = human_sacrifice_active
-								}
-							}
-						}
-						add = 50
-					}
-				}
-			}
-		}
-		wedding_option_entertainment = {
-			wedding_entertainment_bad = {
-				# desc is only shown in debug AI watch window
-				ai_will_do = {
-					value = 0
-					# Financial preference.
-					add = activity_option_likes_cheap_expense_value
-				}
-				cost = {
-					gold = {
-						add = {
-							add = {
-								value = 20
-								desc = wedding_entertainment_bad
-							}
-							add = {
-								value = 20
-								multiply = activity_cost_scale_by_era
-								subtract = 20
-								desc = activity_cost_scale_by_era_desc 
-							}
-							if = {
-								limit = {
-									dynasty ?= { has_dynasty_perk = ep2_activities_legacy_2 }
-								}
-								add = {
-									value = 20
-									multiply = activity_cost_scale_by_era
-									multiply = ep2_activities_legacy_2_grand_weddings_discount_value
-									multiply = -1
-									desc = ep2_activities_legacy_2_name
-								}
-							}
-							# Some people get one free.
-							if = {
-								limit = { factor_zero_if_entitled_to_freebie_activity_trigger = yes }
-								multiply = 0
-								desc = ep2_activities_legacy_5_name
-							}
-						}
-						if = {
-							limit = {
-								is_ai = yes
-							}
-							multiply = 0
-						}
-					}
-				}
-				on_start = {
-					# keep synced with the cost of the option
-					if = {
-						limit = { # if you don't get a freebie or a discount, we add the discounted cost 
-							scope:host = {
-								factor_zero_if_entitled_to_freebie_activity_trigger = no
-								dynasty ?= { has_dynasty_perk = ep2_activities_legacy_2 }
-							}
-						}
-						change_variable = {
-							name = gwedding_refund_pot
-							add = {
-								value = 20
-								multiply = activity_cost_scale_by_era
-								multiply = {
-									value = ep2_activities_legacy_2_grand_weddings_discount_value
-									desc = ep2_activities_legacy_track
-								} 
-							}
-						}
-					}
-					else_if = {
-						limit = { # otherwise, as long as no freebie, we add the full cost
-							scope:host = {
-								factor_zero_if_entitled_to_freebie_activity_trigger = no
-							}
-						}
-						change_variable = {
-							name = gwedding_refund_pot
-							add = {
-								value = 20
-								multiply = activity_cost_scale_by_era
-								desc = wedding_entertainment_normal
-							}
-						}
-					}
-				}
-			}
-
-			wedding_entertainment_normal = {
-				is_valid = {
-				}
-				default = yes
-				# desc is only shown in debug AI watch window
-				ai_will_do = {
-					value = 0
-					# Financial preference.
-					add = activity_option_likes_middling_expense_value
-				}
-				cost = {
-					gold = {
-						add = {
-							add = {
-								value = 60
-								desc = wedding_entertainment_normal
-							}
-							add = {
-								value = 60
-								multiply = activity_cost_scale_by_era
-								subtract = 60
-								desc = activity_cost_scale_by_era_desc 
-							}
-							if = {
-								limit = {
-									dynasty ?= { has_dynasty_perk = ep2_activities_legacy_2 }
-								}
-								add = {
-									value = 60
-									multiply = activity_cost_scale_by_era
-									multiply = ep2_activities_legacy_2_grand_weddings_discount_value
-									multiply = -1
-									desc = ep2_activities_legacy_2_name
-								}
-							}
-							# Some people get one free.
-							if = {
-								limit = { factor_zero_if_entitled_to_freebie_activity_trigger = yes }
-								multiply = 0
-								desc = ep2_activities_legacy_5_name
-							}
-						}
-						if = {
-							limit = {
-								is_ai = yes
-							}
-							multiply = 0
-						}
-					}
-				}
-				on_start = {
-					# Vassal opinion
-					wedding_normal_option_effect = yes
-					# keep synced with the cost of the option
-					if = {
-						limit = { # if you don't get a freebie or a discount, we add the discounted cost 
-							scope:host = {
-								factor_zero_if_entitled_to_freebie_activity_trigger = no
-								dynasty ?= { has_dynasty_perk = ep2_activities_legacy_2 }
-							}
-						}
-						change_variable = {
-							name = gwedding_refund_pot
-							add = {
-								value = 60
-								multiply = activity_cost_scale_by_era
-								multiply = {
-									value = ep2_activities_legacy_2_grand_weddings_discount_value
-									desc = ep2_activities_legacy_track
-								} 
-							}
-						}
-					}
-					else_if = {
-						limit = { # otherwise, as long as no freebie, we add the full cost
-							scope:host = { factor_zero_if_entitled_to_freebie_activity_trigger = no }
-						}
-						change_variable = {
-							name = gwedding_refund_pot
-							add = {
-								value = 60
-								multiply = activity_cost_scale_by_era
-								desc = wedding_entertainment_normal
-							}
-						}
-					}
-				}
-			}
-
-			wedding_entertainment_good = {
-				is_valid = {				
-				}
-				# desc is only shown in debug AI watch window
-				ai_will_do = {
-					value = 0
-					# Financial preference.
-					add = activity_option_likes_heavy_expense_value
-				}
-				cost = {
-					gold = {
-						add = {
-							add = {
-								value = 180
-								desc = wedding_entertainment_good
-							}
-							add = {
-								value = 180
-								multiply = activity_cost_scale_by_era
-								subtract = 180
-								desc = activity_cost_scale_by_era_desc 
-							}
-							if = {
-								limit = {
-									dynasty ?= { has_dynasty_perk = ep2_activities_legacy_2 }
-								}
-								add = {
-									value = 180
-									multiply = activity_cost_scale_by_era
-									multiply = ep2_activities_legacy_2_grand_weddings_discount_value
-									multiply = -1
-									desc = ep2_activities_legacy_2_name
-								}
-							}
-							# Some people get one free.
-							if = {
-								limit = { factor_zero_if_entitled_to_freebie_activity_trigger = yes }
-								multiply = 0
-								desc = ep2_activities_legacy_5_name
-							}
-						}
-						if = {
-							limit = {
-								is_ai = yes
-							}
-							multiply = 0
-						}
-					}
-				}
-				on_start = {
-					# Vassal Opinion and Option bonuses
-					wedding_good_option_effect = yes
-					scope:host = {
-						if = {
-							limit = {
-								has_trait = lifestyle_reveler
-							}
-							add_trait_xp = {
-								trait = lifestyle_reveler
-								value = 5
-							}
-						}
-						else = {
-							add_trait = lifestyle_reveler
-						}
-					}
-					# keep synced with the cost of the option
-					if = {
-						limit = { # if you don't get a freebie or a discount, we add the discounted cost 
-							scope:host = {
-								factor_zero_if_entitled_to_freebie_activity_trigger = no
-								dynasty ?= { has_dynasty_perk = ep2_activities_legacy_2 }
-							}
-						}
-						change_variable = {
-							name = gwedding_refund_pot
-							add = {
-								value = 180
-								multiply = activity_cost_scale_by_era
-								multiply = {
-									value = ep2_activities_legacy_2_grand_weddings_discount_value
-									desc = ep2_activities_legacy_track
-								} 
-							}
-						}
-					}
-					else_if = {
-						limit = { # otherwise, as long as no freebie, we add the full cost
-							scope:host = { factor_zero_if_entitled_to_freebie_activity_trigger = no }
-						}
-						change_variable = {
-							name = gwedding_refund_pot
-							add = {
-								value = 180
-								multiply = activity_cost_scale_by_era
-								desc = wedding_entertainment_normal
-							}
-						}
-					}
-				}
-			}
-		}
-
-		wedding_option_food = {
-			wedding_food_bad = {
-				# desc is only shown in debug AI watch window
-				ai_will_do = {
-					value = 0
-					# Financial preference.
-					add = activity_option_likes_cheap_expense_value
-				}
-				cost = {
-					gold = {
-						add = {
-							add = {
-								value = 20
-								desc = wedding_food_bad
-							}
-							add = {
-								value = 20
-								multiply = activity_cost_scale_by_era
-								subtract = 20
-								desc = activity_cost_scale_by_era_desc 
-							}
-							if = {
-								limit = {
-									dynasty ?= { has_dynasty_perk = ep2_activities_legacy_2 }
-								}
-								add = {
-									value = 20
-									multiply = activity_cost_scale_by_era
-									multiply = ep2_activities_legacy_2_grand_weddings_discount_value
-									multiply = -1
-									desc = ep2_activities_legacy_2_name
-								}
-							}
-							# Some people get one free.
-							if = {
-								limit = { factor_zero_if_entitled_to_freebie_activity_trigger = yes }
-								multiply = 0
-								desc = ep2_activities_legacy_5_name
-							}
-						}
-						if = {
-							limit = {
-								is_ai = yes
-							}
-							multiply = 0
-						}
-					}
-				}
-				on_start = {
-					# keep synced with the cost of the option
-					if = {
-						limit = { # if you don't get a freebie or a discount, we add the discounted cost 
-							scope:host = {
-								factor_zero_if_entitled_to_freebie_activity_trigger = no
-								dynasty ?= { has_dynasty_perk = ep2_activities_legacy_2 }
-							}
-						}
-						change_variable = {
-							name = gwedding_refund_pot
-							add = {
-								value = 20
-								multiply = activity_cost_scale_by_era
-								multiply = {
-									value = ep2_activities_legacy_2_grand_weddings_discount_value
-									desc = ep2_activities_legacy_track
-								} 
-							}
-						}
-					}
-					else_if = {
-						limit = { # otherwise, as long as no freebie, we add the full cost
-							scope:host = { factor_zero_if_entitled_to_freebie_activity_trigger = no }
-						}
-						change_variable = {
-							name = gwedding_refund_pot
-							add = {
-								value = 20
-								multiply = activity_cost_scale_by_era
-								desc = wedding_entertainment_normal
-							}
-						}
-					}
-				}
-			}
-
-			wedding_food_normal = {
-				is_valid = {	
-				}
-				default = yes
-				# desc is only shown in debug AI watch window
-				ai_will_do = {
-					value = 0
-					# Financial preference.
-					add = activity_option_likes_middling_expense_value
-				}
-				cost = {
-					gold = {
-						add = {
-							add = {
-								value = 60
-								desc = wedding_food_normal
-							}
-							add = {
-								value = 60
-								multiply = activity_cost_scale_by_era
-								subtract = 60
-								desc = activity_cost_scale_by_era_desc 
-							}
-							if = {
-								limit = {
-									dynasty ?= { has_dynasty_perk = ep2_activities_legacy_2 }
-								}
-								add = {
-									value = 60
-									multiply = activity_cost_scale_by_era
-									multiply = ep2_activities_legacy_2_grand_weddings_discount_value
-									multiply = -1
-									desc = ep2_activities_legacy_2_name
-								}
-							}
-							# Some people get one free.
-							if = {
-								limit = { factor_zero_if_entitled_to_freebie_activity_trigger = yes }
-								multiply = 0
-								desc = ep2_activities_legacy_5_name
-							}
-						}
-						if = {
-							limit = {
-								is_ai = yes
-							}
-							multiply = 0
-						}
-					}
-				}
-				on_start = {
-					# Vassal Opinion and Option bonuses
-					wedding_normal_option_effect = yes
-					# keep synced with the cost of the option
-					if = {
-						limit = { # if you don't get a freebie or a discount, we add the discounted cost 
-							scope:host = {
-								factor_zero_if_entitled_to_freebie_activity_trigger = no
-								dynasty ?= { has_dynasty_perk = ep2_activities_legacy_2 }
-							}
-						}
-						change_variable = {
-							name = gwedding_refund_pot
-							add = {
-								value = 60
-								multiply = activity_cost_scale_by_era
-								multiply = {
-									value = ep2_activities_legacy_2_grand_weddings_discount_value
-									desc = ep2_activities_legacy_track
-								} 
-							}
-						}
-					}
-					else_if = {
-						limit = { # otherwise, as long as no freebie, we add the full cost
-							scope:host = { factor_zero_if_entitled_to_freebie_activity_trigger = no }
-						}
-						change_variable = {
-							name = gwedding_refund_pot
-							add = {
-								value = 60
-								multiply = activity_cost_scale_by_era
-								desc = wedding_entertainment_normal
-							}
-						}
-					}
-				}
-			}
-
-			wedding_food_good = {
-				is_valid = {
-					
-				}
-				# desc is only shown in debug AI watch window
-				ai_will_do = {
-					value = 0
-					# Financial preference.
-					add = activity_option_likes_heavy_expense_value
-				}
-				cost = {
-					gold = {
-						add = {
-							add = {
-								value = 180
-								desc = wedding_food_good
-							}
-							add = {
-								value = 180
-								multiply = activity_cost_scale_by_era
-								subtract = 180
-								desc = activity_cost_scale_by_era_desc 
-							}
-							if = {
-								limit = {
-									dynasty ?= { has_dynasty_perk = ep2_activities_legacy_2 }
-								}
-								add = {
-									value = 180
-									multiply = activity_cost_scale_by_era
-									multiply = ep2_activities_legacy_2_grand_weddings_discount_value
-									multiply = -1
-									desc = ep2_activities_legacy_2_name
-								}
-							}
-							# Some people get one free.
-							if = {
-								limit = { factor_zero_if_entitled_to_freebie_activity_trigger = yes }
-								multiply = 0
-								desc = ep2_activities_legacy_5_name
-							}
-						}
-						if = {
-							limit = {
-								is_ai = yes
-							}
-							multiply = 0
-						}
-					}
-				}
-				on_start = {
-					# Vassal Opinion and Option bonuses
-					wedding_good_option_effect = yes
-					scope:host = {
-						if = {
-							limit = {
-								has_royal_court = yes
-								has_dlc_feature = royal_court
-							}
-							add_character_modifier = {
-								modifier = wedding_lavish_food_royal_modifier
-								years = 5
-							}
-						}
-						else = {
-							add_character_modifier = {
-								modifier = wedding_lavish_food_modifier
-								years = 5
-							}
-						}
-					}
-					# keep synced with the cost of the option
-					if = {
-						limit = { # if you don't get a freebie or a discount, we add the discounted cost 
-							scope:host = {
-								factor_zero_if_entitled_to_freebie_activity_trigger = no
-								dynasty ?= { has_dynasty_perk = ep2_activities_legacy_2 }
-							}
-						}
-						change_variable = {
-							name = gwedding_refund_pot
-							add = {
-								value = 180
-								multiply = activity_cost_scale_by_era
-								multiply = {
-									value = ep2_activities_legacy_2_grand_weddings_discount_value
-									desc = ep2_activities_legacy_track
-								} 
-							}
-						}
-					}
-					else_if = {
-						limit = { # otherwise, as long as no freebie, we add the full cost
-							scope:host = { factor_zero_if_entitled_to_freebie_activity_trigger = no }
-						}
-						change_variable = {
-							name = gwedding_refund_pot
-							add = {
-								value = 180
-								multiply = activity_cost_scale_by_era
-								desc = wedding_entertainment_normal
-							}
-						}
-					}
-				}
-			}
-		}
-
-		wedding_option_decoration = {
-			wedding_decoration_bad = {
-				# desc is only shown in debug AI watch window
-				ai_will_do = {
-					value = 0
-					# Financial preference.
-					add = activity_option_likes_cheap_expense_value
-				}
-				cost = {
-					gold = {
-						add = {
-							add = {
-								value = 40
-								desc = wedding_decoration_bad
-							}
-							add = {
-								value = 40
-								multiply = activity_cost_scale_by_era
-								subtract = 40
-								desc = activity_cost_scale_by_era_desc 
-							}
-							if = {
-								limit = {
-									dynasty ?= { has_dynasty_perk = ep2_activities_legacy_2 }
-								}
-								add = {
-									value = 40
-									multiply = activity_cost_scale_by_era
-									multiply = ep2_activities_legacy_2_grand_weddings_discount_value
-									multiply = -1
-									desc = ep2_activities_legacy_2_name
-								}
-							}
-							# Some people get one free.
-							if = {
-								limit = { factor_zero_if_entitled_to_freebie_activity_trigger = yes }
-								multiply = 0
-								desc = ep2_activities_legacy_5_name
-							}
-						}
-						if = {
-							limit = {
-								is_ai = yes
-							}
-							multiply = 0
-						}
-					}
-				}
-				on_start = {
-					# keep synced with the cost of the option
-					if = {
-						limit = { # if you don't get a freebie or a discount, we add the discounted cost 
-							scope:host = {
-								factor_zero_if_entitled_to_freebie_activity_trigger = no
-								dynasty ?= { has_dynasty_perk = ep2_activities_legacy_2 }
-							}
-						}
-						change_variable = {
-							name = gwedding_refund_pot
-							add = {
-								value = 40
-								multiply = activity_cost_scale_by_era
-								multiply = {
-									value = ep2_activities_legacy_2_grand_weddings_discount_value
-									desc = ep2_activities_legacy_track
-								} 
-							}
-						}
-					}
-					else_if = {
-						limit = { # otherwise, as long as no freebie, we add the full cost
-							scope:host = { factor_zero_if_entitled_to_freebie_activity_trigger = no }
-						}
-						change_variable = {
-							name = gwedding_refund_pot
-							add = {
-								value = 40
-								multiply = activity_cost_scale_by_era
-								desc = wedding_entertainment_normal
-							}
-						}
-					}
-				}
-			}
-
-			wedding_decoration_normal = {
-				is_valid = {
-				}
-				default = yes
-				# desc is only shown in debug AI watch window
-				ai_will_do = {
-					value = 0
-					# Financial preference.
-					add = activity_option_likes_middling_expense_value
-				}
-				cost = {
-					gold = {
-						add = {
-							add = {
-								value = 120
-								desc = wedding_decoration_normal
-							}
-							add = {
-								value = 120
-								multiply = activity_cost_scale_by_era
-								subtract = 120
-								desc = activity_cost_scale_by_era_desc 
-							}
-							if = {
-								limit = {
-									dynasty ?= { has_dynasty_perk = ep2_activities_legacy_2 }
-								}
-								add = {
-									value = 120
-									multiply = activity_cost_scale_by_era
-									multiply = ep2_activities_legacy_2_grand_weddings_discount_value
-									multiply = -1
-									desc = ep2_activities_legacy_2_name
-								}
-							}
-							# Some people get one free.
-							if = {
-								limit = { factor_zero_if_entitled_to_freebie_activity_trigger = yes }
-								multiply = 0
-								desc = ep2_activities_legacy_5_name
-							}
-						}
-						if = {
-							limit = {
-								is_ai = yes
-							}
-							multiply = 0
-						}
-					}
-				}
-				on_start = {
-					# Vassal Opinion and Option bonuses
-					wedding_normal_option_effect = yes
-					# keep synced with the cost of the option
-					if = {
-						limit = { # if you don't get a freebie or a discount, we add the discounted cost 
-							scope:host = {
-								factor_zero_if_entitled_to_freebie_activity_trigger = no
-								dynasty ?= { has_dynasty_perk = ep2_activities_legacy_2 }
-							}
-						}
-						change_variable = {
-							name = gwedding_refund_pot
-							add = {
-								value = 120
-								multiply = activity_cost_scale_by_era
-								multiply = {
-									value = ep2_activities_legacy_2_grand_weddings_discount_value
-									desc = ep2_activities_legacy_track
-								} 
-							}
-						}
-					}
-					else_if = {
-						limit = { # otherwise, as long as no freebie, we add the full cost
-							scope:host = { factor_zero_if_entitled_to_freebie_activity_trigger = no }
-						}
-						change_variable = {
-							name = gwedding_refund_pot
-							add = {
-								value = 120
-								multiply = activity_cost_scale_by_era
-								desc = wedding_entertainment_normal
-							}
-						}
-					}
-				}
-			}
-
-			wedding_decoration_good = {
-				is_valid = {
-					
-				}
-				# desc is only shown in debug AI watch window
-				ai_will_do = {
-					value = 0
-					# Financial preference.
-					add = activity_option_likes_heavy_expense_value
-				}
-				cost = {
-					gold = {
-						add = {
-							add = {
-								value = 360
-								desc = wedding_decoration_good
-							}
-							add = {
-								value = 360
-								multiply = activity_cost_scale_by_era
-								subtract = 360
-								desc = activity_cost_scale_by_era_desc 
-							}
-							if = {
-								limit = {
-									dynasty ?= { has_dynasty_perk = ep2_activities_legacy_2 }
-								}
-								add = {
-									value = 360
-									multiply = activity_cost_scale_by_era
-									multiply = ep2_activities_legacy_2_grand_weddings_discount_value
-									multiply = -1
-									desc = ep2_activities_legacy_2_name
-								}
-							}
-							# Some people get one free.
-							if = {
-								limit = { factor_zero_if_entitled_to_freebie_activity_trigger = yes }
-								multiply = 0
-								desc = ep2_activities_legacy_5_name
-							}
-						}
-						if = {
-							limit = {
-								is_ai = yes
-							}
-							multiply = 0
-						}
-					}
-				}
-				on_start = {
-					# Vassal Opinion and Option bonuses
-					wedding_good_option_effect = yes
-					scope:host = {
-						add_prestige = medium_prestige_gain
-					}
-					# keep synced with the cost of the option
-					if = {
-						limit = { # if you don't get a freebie or a discount, we add the discounted cost 
-							scope:host = {
-								factor_zero_if_entitled_to_freebie_activity_trigger = no
-								dynasty ?= { has_dynasty_perk = ep2_activities_legacy_2 }
-							}
-						}
-						change_variable = {
-							name = gwedding_refund_pot
-							add = {
-								value = 360
-								multiply = activity_cost_scale_by_era
-								multiply = {
-									value = ep2_activities_legacy_2_grand_weddings_discount_value
-									desc = ep2_activities_legacy_track
-								} 
-							}
-						}
-					}
-					else_if = {
-						limit = { # otherwise, as long as no freebie, we add the full cost
-							scope:host = { factor_zero_if_entitled_to_freebie_activity_trigger = no }
-						}
-						change_variable = {
-							name = gwedding_refund_pot
-							add = {
-								value = 360
-								multiply = activity_cost_scale_by_era
-								desc = wedding_entertainment_normal
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	# special_option_category = special_type
-
-	###################
-	# GUEST HANDLING
-	###################
-
-	max_guests = 80
-
-	guest_invite_rules = {
-		rules = {
-			2 = activity_invite_rule_rivals
-			2 = activity_invite_rule_extended_family
-			1 = activity_invite_rule_hof
 			
-			# MP 
-			6 = activity_invite_mp
+			# Make it a multiple of 5 (rounded up)
+			divide = 5
+			ceiling = yes 
+			multiply = 5
 		}
-		defaults = {
-			2 = activity_invite_rule_friends
-			1 = activity_invite_rule_close_family
-			2 = activity_invite_rule_vassals
-			2 = activity_invite_rule_fellow_vassals
-			3 = activity_invite_rule_courtiers
-			4 = activity_invite_rule_guests
-			2 = activity_invite_rule_all_lieges
-			1 = activity_invite_spouses_close_family
-			2 = activity_invite_spouses_extended_family
-			2 = activity_invite_neighbouring_rulers
-		}
-	}
-
-	can_be_activity_guest = {
-		is_adult = yes
-		is_healthy = yes
-		in_diplomatic_range = scope:host
-	}
-
-	host_intents = {
-		intents = { reduce_stress_intent murder_attendee_intent woo_attendee_intent diplomatic_intent matchmaking_intent }
-		default = reduce_stress_intent
-	}
-
-	guest_intents = {
-		intents = { reduce_stress_intent murder_attendee_intent woo_attendee_intent diplomatic_intent banquet_mischief_intent }
-		default = reduce_stress_intent
-	}
-
-	guest_join_chance = {
-		base = 10
-		base_activity_modifier = yes
-
-		# Scripted Modifiers
-		activity_guest_shared_ai_accept_modifier = yes
-		activity_guest_wedding_ai_accept_modifier = yes
-		
-		# Master of Revels Accolade increasing invite acceptance
-		modifier = {
-   		   scope:host = {
-   		   		any_active_accolade = {
-					has_accolade_parameter = acclaimed_knight_feast_wedding_invite_acceptance_bonus
-				}
-   		   }
-   		   add = accolade_feast_wedding_invite_acceptance_value
-   		}
-	}
-
-	special_guests = {
-		spouse_1 = {
-			is_required = yes
-
-			# You can only promise a grand wedding to one character, so we can just directly grab them
-			select_character = {
-				var:promised_grand_wedding_marriage_countdown = {
-					save_scope_as = character
-				}
-			}
-
-			can_pick = {
-				is_valid_grand_wedding_special_guest_trigger = { OTHER_SPOUSE = scope:spouse_2 }
-				OR = {
-					AND = {
-						is_male = yes
-						patrilinear_betrothal = yes
-					}
-					AND = {
-						is_female = yes
-						matrilinear_betrothal = yes
-					}
-				}
-			}
-			on_invite = {
-				if = {
-					limit = {
-						is_close_or_extended_family_of = scope:host
-						NOT = { this = scope:host }
-						dynasty = scope:host.dynasty
-					}
-					add_opinion = {
-						target = scope:host
-						modifier = organized_my_wedding_opinion
-					}
-				}
-			}
-		}
-
-		spouse_2 = {
-			is_required = yes
-
-			select_character = {
-				var:promised_grand_wedding_marriage_countdown.betrothed = {
-					save_scope_as = character
-				}
-			}
-
-			can_pick = {
-				is_valid_grand_wedding_special_guest_trigger = { OTHER_SPOUSE = scope:spouse_1 }
-				betrothed = {
-					OR = {
-						AND = {
-							is_male = yes
-							patrilinear_betrothal = yes
-						}
-						AND = {
-							is_female = yes
-							matrilinear_betrothal = yes
-						}
-					}
-				}
-			}
-			on_invite = {
-				if = {
-					limit = {
-						is_close_or_extended_family_of = scope:host
-						NOT = { this = scope:host }
-						dynasty = scope:host.dynasty
-					}
-					add_opinion = {
-						target = scope:host
-						modifier = organized_my_wedding_opinion
-					}
-				}
-			}
-		}
-	}
-
-	travel_entourage_selection = {
-		weight = standard_travel_entourage_additions
-		max = 10
-   		invite_rule_order = 3
 	}
 
 	###################
-	# ACTIVITY-SPECIFIC PULSES
+	# GRAPHICS
 	###################
-
-	pulse_actions = {
-		entries = { excellent_food hook_trusting_guest dynasty_blessing cultural_acceptance marriage_reflection royal_gift gossip_with_guests contact_network wedding_gift bonding_spouse_family received_flowers admired_venue knight_praised seductive_exchange impressed_courtly_vassal music_performance poetry_performance floral_exhibit spouse_impressed spouse_skill_diplomacy_improves spouse_gives_host_prestige spouse_manages_feast_splendidly spouse_impresses_clergy spouse_gives_hook relation_gains_friend lauded_food children_bonding guest_impressed_by_court_artifact guest_chokes_on_bone guest_brawl friend_lauds_efforts courtly_vassals_appeased spouse_insults_host host_gains_diplo_xp host_gains_steward_xp host_gains_intrigue_xp ridiculed_food guest_tells_fantastic_joke }
-		chance_of_no_event = 3
-	}
-
-	on_start = {
-		#if = { # Activity count debugging, left in for QA purposes
-		#	limit = {
-		#		debug_only = yes
-		#	}
-		#	if = {
-		#		limit = {
-		#			NOT = {
-		#				exists = global_var:wedding_count
-		#			}
-		#		}
-		#		set_global_variable = {
-		#			name = wedding_count
-		#			value = 1
-		#		}
-		#	}
-		#	else = {
-		#		change_global_variable = {
-		#			name = wedding_count
-		#			add = 1
-		#		}
-		#	}
-		#	
-		#	if = {
-		#		limit = {
-		#			scope:host = { highest_held_title_tier = tier_county }
-		#			NOT = {
-		#				exists = global_var:wedding_c
-		#			}
-		#		}
-		#		set_global_variable = {
-		#			name = wedding_c
-		#			value = 1
-		#		}
-		#	}
-		#	else_if = {
-		#		limit = {
-		#			scope:host = { highest_held_title_tier = tier_county }
-		#		}
-		#		change_global_variable = {
-		#			name = wedding_c
-		#			add = 1
-		#		}
-		#	}
-		#	
-		#	if = {
-		#		limit = {
-		#			scope:host = { highest_held_title_tier = tier_duchy }
-		#			NOT = {
-		#				exists = global_var:wedding_d
-		#			}
-		#		}
-		#		set_global_variable = {
-		#			name = wedding_d
-		#			value = 1
-		#		}
-		#	}
-		#	else_if = {
-		#		limit = {
-		#			scope:host = { highest_held_title_tier = tier_duchy }
-		#		}
-		#		change_global_variable = {
-		#			name = wedding_d
-		#			add = 1
-		#		}
-		#	}
-		#	
-		#	if = {
-		#		limit = {
-		#			scope:host = { highest_held_title_tier = tier_kingdom }
-		#			NOT = {
-		#				exists = global_var:wedding_k
-		#			}
-		#		}
-		#		set_global_variable = {
-		#			name = wedding_k
-		#			value = 1
-		#		}
-		#	}
-		#	else_if = {
-		#		limit = {
-		#			scope:host = { highest_held_title_tier = tier_kingdom }
-		#		}
-		#		change_global_variable = {
-		#			name = wedding_k
-		#			add = 1
-		#		}
-		#	}
-		#	
-		#	if = {
-		#		limit = {
-		#			scope:host = { highest_held_title_tier = tier_empire }
-		#			NOT = {
-		#				exists = global_var:wedding_e
-		#			}
-		#		}
-		#		set_global_variable = {
-		#			name = wedding_e
-		#			value = 1
-		#		}
-		#	}
-		#	else_if = {
-		#		limit = {
-		#			scope:host = { highest_held_title_tier = tier_empire }
-		#		}
-		#		change_global_variable = {
-		#			name = wedding_e
-		#			add = 1
-		#		}
-		#	}
-		#	
-		#	if = {
-		#		limit = {
-		#			scope:host.location = { geographical_region = world_middle_east }
-		#			NOT = {
-		#				exists = global_var:wedding_world_middle_east
-		#			}
-		#		}
-		#		set_global_variable = {
-		#			name = wedding_world_middle_east
-		#			value = 1
-		#		}
-		#	}
-		#	else_if = {
-		#		limit = {
-		#			scope:host.location = { geographical_region = world_middle_east }
-		#		}
-		#		change_global_variable = {
-		#			name = wedding_world_middle_east
-		#			add = 1
-		#		}
-		#	}
-		#	
-		#	if = {
-		#		limit = {
-		#			scope:host.location = { geographical_region = world_europe }
-		#			NOT = {
-		#				exists = global_var:wedding_world_europe
-		#			}
-		#		}
-		#		set_global_variable = {
-		#			name = wedding_world_europe
-		#			value = 1
-		#		}
-		#	}
-		#	else_if = {
-		#		limit = {
-		#			scope:host.location = { geographical_region = world_europe }
-		#		}
-		#		change_global_variable = {
-		#			name = wedding_world_europe
-		#			add = 1
-		#		}
-		#	}
-		#	
-		#	if = {
-		#		limit = {
-		#			scope:host.location = { geographical_region = world_steppe }
-		#			NOT = {
-		#				exists = global_var:wedding_world_steppe
-		#			}
-		#		}
-		#		set_global_variable = {
-		#			name = wedding_world_steppe
-		#			value = 1
-		#		}
-		#	}
-		#	else_if = {
-		#		limit = {
-		#			scope:host.location = { geographical_region = world_steppe }
-		#		}
-		#		change_global_variable = {
-		#			name = wedding_world_steppe
-		#			add = 1
-		#		}
-		#	}
-		#	
-		#	if = {
-		#		limit = {
-		#			scope:host.location = { geographical_region = world_africa }
-		#			NOT = {
-		#				exists = global_var:wedding_world_africa
-		#			}
-		#		}
-		#		set_global_variable = {
-		#			name = wedding_world_africa
-		#			value = 1
-		#		}
-		#	}
-		#	else_if = {
-		#		limit = {
-		#			scope:host.location = { geographical_region = world_africa }
-		#		}
-		#		change_global_variable = {
-		#			name = wedding_world_africa
-		#			add = 1
-		#		}
-		#	}
-		#	
-		#	if = {
-		#		limit = {
-		#			scope:host.location = { geographical_region = world_india }
-		#			NOT = {
-		#				exists = global_var:wedding_world_india
-		#			}
-		#		}
-		#		set_global_variable = {
-		#			name = wedding_world_india
-		#			value = 1
-		#		}
-		#	}
-		#	else_if = {
-		#		limit = {
-		#			scope:host.location = { geographical_region = world_india }
-		#		}
-		#		change_global_variable = {
-		#			name = wedding_world_india
-		#			add = 1
-		#		}
-		#	}
-		#}
-		# Keep synced with the wedding Base cost
-		set_variable = {
-			name = gwedding_refund_pot
-			value = scope:host.base_wedding_cost
-		}
-		scope:activity = { #we save the spouse_2 as a variable in case we kill them
-			set_variable = {
-				name = spouse_2_var
-				value = special_guest:spouse_2
-			}
-			# we save a countdown to check that no spouse has gotten stuck in odd places - don't ask
-			set_variable = {
-				name = activity_travel_countdown
-				days = 15
-			}
-		}
-		if = {
-			limit = {
-				scope:activity = {
-					has_activity_option = { 
-						category = special_type 
-						option = wedding_type_bloody
-					}
-				}
-			}
-			scope:host = {
-				set_variable = {
-					name = recent_red_wedding_var
-					years = 15
-				}
-			}
-			if = {
-				limit = {
-					OR = {
-						scope:activity.special_guest:spouse_2 = scope:host.liege
-						scope:host.liege = {
-							is_close_or_extended_family_of = scope:activity.special_guest:spouse_2
-							NOT = { this = root }
-							is_close_family_or_spouse_of_root_trigger = no
-						}
-					}
-				}
-				scope:host = { set_variable = murder_feast_liege_var }
-			}
-			if = {
-				limit = {
-					OR = {
-						scope:activity.special_guest:spouse_2 = scope:host.faith.religious_head
-						scope:host.faith.religious_head = {
-							is_close_or_extended_family_of = scope:activity.special_guest:spouse_2
-							NOT = { this = root }
-							is_close_family_or_spouse_of_root_trigger = no
-						}
-					}
-				}
-				scope:host = { set_variable = murder_feast_head_of_faith_var }
-			}
-		}
-		#fires hostage reunion event, if hostage giver is also present
-		every_attending_character = {
-			limit = {
-				is_hostage_warden = yes
-				has_bp2_dlc_trigger = yes
-				NOT = { this = scope:host }
-			}
-			trigger_event = {
-				id = bp2_yearly.6120
-				days = 2
-			}
-		}
-	}
-
-	# Effects run when a character enters a travel state
-	# root = character in this phase
-	# scope:activity = the activity
-	# scope:host = host of the activity
-	on_enter_travel_state = {
-	}
-
-	# Effects run when a character enters a passive state after travel
-	# root = character in this phase
-	# scope:activity = the activity
-	# scope:host = host of the activity
-	on_enter_passive_state = {
-
-	}
-
-	# Effects run during the activity event pulse for characters in the passive state
-	# root = character in this phase
-	# scope:activity = the activity
-	# scope:host = host of the activity
-	on_passive_state_pulse = {		
-		
-	}
-
-	# Effects run when entering an active phase of the activity
-	# root = character in this phase
-	# scope:activity = the activity
-	# scope:host = host of the activity
-	on_enter_active_state = {
-
-	}
-
-	# Effects run during the activity event pulse for characters in the active state
-	# root = character in this phase
-	# scope:activity = the activity
-	# scope:host = host of the activity
-	on_active_state_pulse = {
-		# add active state events here
-		# maybe some way to check if this is the first active state?
-	}
-
-	# Effects run when the activity completes after its last phase
-	# root = character in this phase
-	# scope:activity = the activity
-	# scope:host = host of the activity
-	on_complete = {
-		# Run conclusion stuff here
-		scope:host = {
-			save_scope_as = host
-		}
-		scope:activity.activity_location = {
-			save_scope_as = wedding_venue
-		}
-		# Remove the wedding reward for Bloody Weddings
-		if = {
-			limit = {
-				scope:activity = {
-					has_activity_option = { 
-						category = special_type 
-						option = wedding_type_bloody
-					}
-					activity_location.county = {
-						has_county_modifier = ruler_married_here_county_modifier
-					}
-				}
-			}
-			scope:activity.activity_location.county = {
-				remove_county_modifier = ruler_married_here_county_modifier
-			}
-		}
-		# Clean up for murder host / guests
-		if = {
-			limit = {
-				scope:activity = {
-					has_activity_option = { 
-						category = special_type 
-						option = wedding_type_bloody
-					}
-				}
-				scope:host = {
-					#You haven't failed/backed down
-					NOR = {
-						has_variable = bloody_wedding_backed_down_var
-						has_variable = bloody_murder_fail
-					}
-				}
-			}
-			if = {
-				limit = {
-					this = scope:host 
-				}
-				# For the murderous host
-				scope:host = {
-					trigger_event = ep2_wedding.0301 #this triggers event ep2_wedding.0955
-					disburse_murder_wedding_host_rewards = yes
-				}
-			}
-			else = {
-				# For the survivors - realize you're in a Red Wedding
-				scope:activity = {
-					every_attending_character = {
-						limit = {
-							NOT = { this = scope:host }
-						}
-						trigger_event = ep2_wedding.0302 #includes special loc for spouse_1 if not host
-					}
-				}
-			}
-		}
-		# Fires for every attendee
-		# Accolade stuff
-		if = {
-			limit = {
-				this = scope:host
-				has_character_modifier = accolade_charmer_party_modifier
-			}
-			remove_character_modifier = accolade_charmer_party_modifier
-		}
-		if = {
-			limit = {
-				this = scope:host
-				has_character_modifier = accolade_charmer_party_high_modifier
-			}
-			remove_character_modifier = accolade_charmer_party_high_modifier
-		}
-
-		# Rewards for Bloody Weddings given out in event ep2_wedding.0955
-			
-		# Rewards for Normal Weddings
-		if = {
-			limit = {
-				OR = {
-					scope:activity = {
-						has_activity_option = { 
-							category = special_type 
-							option = wedding_type_normal
-						}
-					}
-					scope:host = { has_variable = bloody_wedding_backed_down_var } #you've backed down from a Red Wedding
-				}
-			}
-			scope:activity.special_guest:spouse_1 = {
-				save_scope_as = spouse_1
-			}
-			scope:activity.special_guest:spouse_2 = {
-				save_scope_as = spouse_2
-			}
-			if = {
-				limit = {
-					root = scope:host
-				}
-				root = { disburse_wedding_activity_rewards = yes }
-				if = {
-					limit = {
-						scope:host = scope:spouse_1
-					}
-					root = { disburse_wedding_spouse_host_activity_rewards = yes }
-					scope:spouse_2 = { disburse_wedding_spouse_activity_rewards = yes }
-				}
-				else_if = {
-					limit = {
-						scope:host = scope:spouse_2
-					}
-					root = { disburse_wedding_spouse_host_activity_rewards = yes }
-					scope:spouse_1 = { disburse_wedding_spouse_activity_rewards = yes }
-				}
-				# if the host is not a spouse, we disburse the regular spouse rewards to both spouses
-				else_if = {
-					limit = {
-						root = scope:host
-						NOR = {
-							scope:host = scope:spouse_1
-							scope:host = scope:spouse_2
-						}
-					}
-					scope:spouse_1 = { disburse_wedding_spouse_activity_rewards = yes }
-					scope:spouse_2 = { disburse_wedding_spouse_activity_rewards = yes }
-				}
-				# Conclusion notification event for the host
-				trigger_event = ep2_wedding.0950
-			}
-			else_if = {
-				limit = {
-					OR = {
-						root = scope:spouse_1
-						root = scope:spouse_2
-					}
-					NOT = { root = scope:host }
-				}
-				# Conclusion notification event for the spouses
-				# The spouses' rewards are handed out by the host to ensure they are given just once to each
-				trigger_event = ep2_wedding.0960
-			}
-			else = {
-				# Conclusion notification event for the guests
-				# The guests' rewards are handed out by the host (inside the host's disburse effect) to ensure they are given just once to each
-				trigger_event = ep2_wedding.0970
-			}
-		}
-		if = {
-			limit = { has_character_modifier = wedding_confident_groom }
-			remove_character_modifier = wedding_confident_groom
-		}
-		if = {
-			limit = { has_character_modifier = wedding_confident_bride }
-			remove_character_modifier = wedding_confident_bride
-		}
-		if = {
-			limit = { has_character_modifier = wedding_jitters }
-			remove_character_modifier = wedding_jitters
-		}
-
-		# Dynasty Legacies
-		host_has_taken_freebie_activity_effect = yes
-
-		# Achievement tracking.
-		if = {
-			limit = {
-				this = scope:host
-			}
-			scope:host = {
-				## A.E.I.O.U & Me
-				if = {
-					limit = {
-						exists = global_var:started_a_e_i_o_u_and_me_achievement
-						exists = dynasty
-					}
-					dynasty = {
-						if = {
-							limit = {
-								NOT = { has_variable = a_e_i_o_u_and_me_achievement_grand_wedding_tally }
-							}
-							set_variable = {
-								name = a_e_i_o_u_and_me_achievement_grand_wedding_tally
-								value = 1
-							}
-						}
-						else = {
-							change_variable = {
-								name = a_e_i_o_u_and_me_achievement_grand_wedding_tally
-								add = 1
-							}
-						}
-					}
-				}
-				## Black Dinner
-				if = {
-					limit = {
-						exists = global_var:started_black_dinner_achievement
-						is_ai = no
-						scope:activity = {
-							has_activity_option = {
-								category = special_type
-								option = wedding_type_bloody
-							}
-						}
-						NOR = {
-							has_variable = bloody_murder_fail
-							has_variable = bloody_wedding_backed_down_var
-						}
-					}
-					set_global_variable = {
-						name = finished_black_dinner_achievement
-						value = yes
-					}
-				}
-			}
-		}
-		# Free the officiant!
-		if = {
-			limit = { exists = scope:officiant }
-			scope:officiant = {
-				if = {
-					limit = { has_character_flag = need_priest_outfit }
-					remove_character_flag = need_priest_outfit
-				}
-				if = {
-					limit = { has_character_flag = officiant }
-					remove_character_flag = officiant
-				}
-			}
-		}
-	}
-
-	### Graphics
-	is_grand_activity = yes
 
 	map_entity = {
 		trigger = {
@@ -2417,7 +727,7 @@
 				}
 			}
 		}
-		reference = "building_mena_wedding_01_entity"
+		reference = "building_mena_feast_01_entity"
 	}
 
 	map_entity = {
@@ -2426,31 +736,16 @@
 				has_graphical_india_culture_group_trigger = yes
 			}
 		}
-		reference = "building_indian_wedding_01_entity"
+		reference = "building_indian_feast_01_entity"
 	}
 	
-	map_entity = "building_western_wedding_01_entity"
+	map_entity = "building_western_feast_01_entity"
 
 	# Travel
 	background = { # Bridge
 		trigger = {
-			scope:activity = { is_current_phase_active = no }
-			OR = {
-				NOT = {
-					scope:host.location = scope:activity.activity_location
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_2.location
-					NOT = {
-						scope:activity.special_guest:spouse_2.location ?= scope:activity.activity_location
-					}
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_1.location
-					NOT = {
-						scope:activity.special_guest:spouse_1.location ?= scope:activity.activity_location
-					}
-				}
+			NOT = {
+				scope:host.location = scope:activity.activity_location
 			}
 			scope:host.location = {
 				is_riverside_province = yes
@@ -2470,23 +765,8 @@
 	
 	background = { # Farmland, settled
 		trigger = {
-			scope:activity = { is_current_phase_active = no }
-			OR = {
-				NOT = {
-					scope:host.location = scope:activity.activity_location
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_2.location
-					NOT = {
-						scope:activity.special_guest:spouse_2.location ?= scope:activity.activity_location
-					}
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_1.location
-					NOT = {
-						scope:activity.special_guest:spouse_1.location ?= scope:activity.activity_location
-					}
-				}
+			NOT = {
+				scope:host.location = scope:activity.activity_location
 			}
 			scope:host.location = {
 				terrain = farmlands
@@ -2499,23 +779,8 @@
 	}
 	background = { # Farmland, unsettled
 		trigger = {
-			scope:activity = { is_current_phase_active = no }
-			OR = {
-				NOT = {
-					scope:host.location = scope:activity.activity_location
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_2.location
-					NOT = {
-						scope:activity.special_guest:spouse_2.location ?= scope:activity.activity_location
-					}
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_1.location
-					NOT = {
-						scope:activity.special_guest:spouse_1.location ?= scope:activity.activity_location
-					}
-				}
+			NOT = {
+				scope:host.location = scope:activity.activity_location
 			}
 			scope:host.location = {
 				terrain = farmlands
@@ -2529,23 +794,8 @@
 
 	background = { #Desert, settled
 		trigger = {
-			scope:activity = { is_current_phase_active = no }
-			OR = {
-				NOT = {
-					scope:host.location = scope:activity.activity_location
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_2.location
-					NOT = {
-						scope:activity.special_guest:spouse_2.location ?= scope:activity.activity_location
-					}
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_1.location
-					NOT = {
-						scope:activity.special_guest:spouse_1.location ?= scope:activity.activity_location
-					}
-				}
+			NOT = {
+				scope:host.location = scope:activity.activity_location
 			}
 			scope:host.location = {
 				graphical_wilderness_desert_trigger = yes
@@ -2558,23 +808,8 @@
 	}
 	background = { #Desert, unsettled
 		trigger = {
-			scope:activity = { is_current_phase_active = no }
-			OR = {
-				NOT = {
-					scope:host.location = scope:activity.activity_location
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_2.location
-					NOT = {
-						scope:activity.special_guest:spouse_2.location ?= scope:activity.activity_location
-					}
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_1.location
-					NOT = {
-						scope:activity.special_guest:spouse_1.location ?= scope:activity.activity_location
-					}
-				}
+			NOT = {
+				scope:host.location = scope:activity.activity_location
 			}
 			scope:host.location = {
 				graphical_wilderness_desert_trigger = yes
@@ -2588,50 +823,20 @@
 
 	background = { #forest snowy
 		trigger = {
-			scope:activity = { is_current_phase_active = no }
-			OR = {
-				NOT = {
-					scope:host.location = scope:activity.activity_location
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_2.location
-					NOT = {
-						scope:activity.special_guest:spouse_2.location ?= scope:activity.activity_location
-					}
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_1.location
-					NOT = {
-						scope:activity.special_guest:spouse_1.location ?= scope:activity.activity_location
-					}
-				}
+			NOT = {
+				scope:host.location = scope:activity.activity_location
 			}
 			scope:host.location ?= { hunt_snowy_forest_trigger = yes }
 		}
 		texture = "gfx/interface/illustrations/event_scenes/ep2_hunt_snowy_forest.dds"
 		environment = "environment_hunt_snowy_forest"
-		ambience = "event:/SFX/Events/Backgrounds/mountains_day" 
+		ambience = "event:/SFX/Events/Backgrounds/mountains_day"
 	}
 
 	background = { #forest_pine
 		trigger = {
-			scope:activity = { is_current_phase_active = no }
-			OR = {
-				NOT = {
-					scope:host.location = scope:activity.activity_location
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_2.location
-					NOT = {
-						scope:activity.special_guest:spouse_2.location ?= scope:activity.activity_location
-					}
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_1.location
-					NOT = {
-						scope:activity.special_guest:spouse_1.location ?= scope:activity.activity_location
-					}
-				}
+			NOT = {
+				scope:host.location = scope:activity.activity_location
 			}
 			scope:host.location = {
 				graphical_wilderness_forest_pine_trigger = yes
@@ -2644,23 +849,8 @@
 
 	background = { #forest
 		trigger = {
-			scope:activity = { is_current_phase_active = no }
-			OR = {
-				NOT = {
-					scope:host.location = scope:activity.activity_location
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_2.location
-					NOT = {
-						scope:activity.special_guest:spouse_2.location ?= scope:activity.activity_location
-					}
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_1.location
-					NOT = {
-						scope:activity.special_guest:spouse_1.location ?= scope:activity.activity_location
-					}
-				}
+			NOT = {
+				scope:host.location = scope:activity.activity_location
 			}
 			scope:host.location = {
 				graphical_wilderness_forest_trigger = yes
@@ -2673,23 +863,8 @@
 
 	background = { #mountains, settled
 		trigger = {
-			scope:activity = { is_current_phase_active = no }
-			OR = {
-				NOT = {
-					scope:host.location = scope:activity.activity_location
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_2.location
-					NOT = {
-						scope:activity.special_guest:spouse_2.location ?= scope:activity.activity_location
-					}
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_1.location
-					NOT = {
-						scope:activity.special_guest:spouse_1.location ?= scope:activity.activity_location
-					}
-				}
+			NOT = {
+				scope:host.location = scope:activity.activity_location
 			}
 			scope:host.location = {
 				graphical_wilderness_mountains_trigger = yes
@@ -2702,23 +877,8 @@
 	}
 	background = { #mountains, unsettled
 		trigger = {
-			scope:activity = { is_current_phase_active = no }
-			OR = {
-				NOT = {
-					scope:host.location = scope:activity.activity_location
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_2.location
-					NOT = {
-						scope:activity.special_guest:spouse_2.location ?= scope:activity.activity_location
-					}
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_1.location
-					NOT = {
-						scope:activity.special_guest:spouse_1.location ?= scope:activity.activity_location
-					}
-				}
+			NOT = {
+				scope:host.location = scope:activity.activity_location
 			}
 			scope:host.location = {
 				graphical_wilderness_mountains_trigger = yes
@@ -2732,23 +892,8 @@
 
 	background = { #steppe, settled
 		trigger = {
-			scope:activity = { is_current_phase_active = no }
-			OR = {
-				NOT = {
-					scope:host.location = scope:activity.activity_location
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_2.location
-					NOT = {
-						scope:activity.special_guest:spouse_2.location ?= scope:activity.activity_location
-					}
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_1.location
-					NOT = {
-						scope:activity.special_guest:spouse_1.location ?= scope:activity.activity_location
-					}
-				}
+			NOT = {
+				scope:host.location = scope:activity.activity_location
 			}
 			scope:host.location = {
 				graphical_wilderness_steppe_trigger = yes
@@ -2761,23 +906,8 @@
 	}
 	background = { #steppe, unsettled
 		trigger = {
-			scope:activity = { is_current_phase_active = no }
-			OR = {
-				NOT = {
-					scope:host.location = scope:activity.activity_location
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_2.location
-					NOT = {
-						scope:activity.special_guest:spouse_2.location ?= scope:activity.activity_location
-					}
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_1.location
-					NOT = {
-						scope:activity.special_guest:spouse_1.location ?= scope:activity.activity_location
-					}
-				}
+			NOT = {
+				scope:host.location = scope:activity.activity_location
 			}
 			scope:host.location = {
 				graphical_wilderness_steppe_trigger = yes
@@ -2791,23 +921,8 @@
 
 	background = { #drylands (formerly desert)
 		trigger = {
-			scope:activity = { is_current_phase_active = no }
-			OR = {
-				NOT = {
-					scope:host.location = scope:activity.activity_location
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_2.location
-					NOT = {
-						scope:activity.special_guest:spouse_2.location ?= scope:activity.activity_location
-					}
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_1.location
-					NOT = {
-						scope:activity.special_guest:spouse_1.location ?= scope:activity.activity_location
-					}
-				}
+			NOT = {
+				scope:host.location = scope:activity.activity_location
 			}
 			scope:host.location = {
 				graphical_drylands_trigger = yes
@@ -2820,23 +935,8 @@
 
 	background = { #wetlands
 		trigger = {
-			scope:activity = { is_current_phase_active = no }
-			OR = {
-				NOT = {
-					scope:host.location = scope:activity.activity_location
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_2.location
-					NOT = {
-						scope:activity.special_guest:spouse_2.location ?= scope:activity.activity_location
-					}
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_1.location
-					NOT = {
-						scope:activity.special_guest:spouse_1.location ?= scope:activity.activity_location
-					}
-				}
+			NOT = {
+				scope:host.location = scope:activity.activity_location
 			}
 			scope:host.location = {
 				graphical_wilderness_wetlands_trigger = yes
@@ -2849,23 +949,8 @@
 
 	background = { #jungle
 		trigger = {
-			scope:activity = { is_current_phase_active = no }
-			OR = {
-				NOT = {
-					scope:host.location = scope:activity.activity_location
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_2.location
-					NOT = {
-						scope:activity.special_guest:spouse_2.location ?= scope:activity.activity_location
-					}
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_1.location
-					NOT = {
-						scope:activity.special_guest:spouse_1.location ?= scope:activity.activity_location
-					}
-				}
+			NOT = {
+				scope:host.location = scope:activity.activity_location
 			}
 			scope:host.location = {
 				graphical_wilderness_jungle_trigger = yes
@@ -2878,23 +963,8 @@
 
 	background = { #plains, settled
 		trigger = {
-			scope:activity = { is_current_phase_active = no }
-			OR = {
-				NOT = {
-					scope:host.location = scope:activity.activity_location
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_2.location
-					NOT = {
-						scope:activity.special_guest:spouse_2.location ?= scope:activity.activity_location
-					}
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_1.location
-					NOT = {
-						scope:activity.special_guest:spouse_1.location ?= scope:activity.activity_location
-					}
-				}
+			NOT = {
+				scope:host.location = scope:activity.activity_location
 			}
 			scope:host.location = {
 				graphical_plains_trigger = yes
@@ -2907,23 +977,8 @@
 	}
 	background = { #plains, unsettled
 		trigger = {
-			scope:activity = { is_current_phase_active = no }
-			OR = {
-				NOT = {
-					scope:host.location = scope:activity.activity_location
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_2.location
-					NOT = {
-						scope:activity.special_guest:spouse_2.location ?= scope:activity.activity_location
-					}
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_1.location
-					NOT = {
-						scope:activity.special_guest:spouse_1.location ?= scope:activity.activity_location
-					}
-				}
+			NOT = {
+				scope:host.location = scope:activity.activity_location
 			}
 			scope:host.location = {
 				graphical_plains_trigger = yes
@@ -2937,23 +992,8 @@
 
 	background = { #hills, settled
 		trigger = {
-			scope:activity = { is_current_phase_active = no }
-			OR = {
-				NOT = {
-					scope:host.location = scope:activity.activity_location
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_2.location
-					NOT = {
-						scope:activity.special_guest:spouse_2.location ?= scope:activity.activity_location
-					}
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_1.location
-					NOT = {
-						scope:activity.special_guest:spouse_1.location ?= scope:activity.activity_location
-					}
-				}
+			NOT = {
+				scope:host.location = scope:activity.activity_location
 			}
 			scope:host.location = {
 				graphical_hills_trigger = yes
@@ -2966,23 +1006,8 @@
 	}
 	background = { #hills, unsettled
 		trigger = {
-			scope:activity = { is_current_phase_active = no }
-			OR = {
-				NOT = {
-					scope:host.location = scope:activity.activity_location
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_2.location
-					NOT = {
-						scope:activity.special_guest:spouse_2.location ?= scope:activity.activity_location
-					}
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_1.location
-					NOT = {
-						scope:activity.special_guest:spouse_1.location ?= scope:activity.activity_location
-					}
-				}
+			NOT = {
+				scope:host.location = scope:activity.activity_location
 			}
 			scope:host.location = {
 				graphical_hills_trigger = yes
@@ -2996,23 +1021,8 @@
 
 	background = { #sea
 		trigger = {
-			scope:activity = { is_current_phase_active = no }
-			OR = {
-				NOT = {
-					scope:host.location = scope:activity.activity_location
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_2.location
-					NOT = {
-						scope:activity.special_guest:spouse_2.location ?= scope:activity.activity_location
-					}
-				}
-				AND = {
-					exists = scope:activity.special_guest:spouse_1.location
-					NOT = {
-						scope:activity.special_guest:spouse_1.location ?= scope:activity.activity_location
-					}
-				}
+			NOT = {
+				scope:host.location = scope:activity.activity_location
 			}
 			scope:host.location = {
 				is_sea_province = yes
@@ -3023,127 +1033,51 @@
 		ambience = "event:/DLC/FP1/SFX/Events/event_ocean_longship"
 	}
 	# End Travel
-	background = {	 #Indian
+
+	background = {
 		trigger = {
-			activity_location.culture = { has_graphical_india_culture_group_trigger = yes }
-		}
-		texture = "gfx/interface/illustrations/event_scenes/ep2_wedding_ceremony_indian.dds"
-		environment = "environment_indian_wedding"
-		ambience = "event:/DLC/EP2/SFX/Events/Grand_Activities/Weddings/ep2_event_grand_wedding"
-		music = "weddingindia_cue"
-	}
-	background = {	 #MENA (also steppes and African )
-		trigger = {
-			OR = {
-				activity_location.culture = { has_graphical_mena_culture_group_trigger = yes }
-				activity_location.culture = { has_graphical_steppe_culture_group_trigger = yes }
-				activity_location.culture = { has_graphical_african_culture_group_trigger = yes }
+			exists = scope:activity
+			exists = scope:host
+			scope:host = {
+				faith = {
+					has_doctrine_parameter = cremation_funeral
+				}
 			}
 		}
-		texture = "gfx/interface/illustrations/event_scenes/ep2_wedding_ceremony_mena.dds"
-		environment = "environment_mena_wedding"
-		ambience = "event:/DLC/EP2/SFX/Events/Grand_Activities/Weddings/ep2_event_grand_wedding"
-		music = "weddingmena_cue"
+		texture = "gfx/interface/illustrations/event_scenes/fp4_funeral_pyre.dds"
+		environment = "environment_ce1_funeral_pyre"
+		ambience = "event:/SFX/Events/Backgrounds/FP4/fp4_epidemic_corpsecarts"
 	}
-	background = {	 # Western - Fallback
-		texture = "gfx/interface/illustrations/event_scenes/ep2_wedding_ceremony_western.dds"
-		environment = "environment_western_wedding"
-		ambience = "event:/DLC/EP2/SFX/Events/Grand_Activities/Weddings/ep2_event_grand_wedding"
-		music = "weddingwest_cue"
-	}
-	background = { # Bloody Wedding
-		trigger = {
-			scope:activity.var:spouse_2_var ?= {
-				is_alive = no
-			}
-		}
-		texture = "gfx/interface/illustrations/event_scenes/feast.dds"
-		environment = "environment_event_feast"
-		ambience = "event:/SFX/Events/Backgrounds/feasthall"
-		music = "murderfest_cue"
+	background = {
+		texture = "gfx/interface/illustrations/event_scenes/fp4_catacombs.dds"
+		environment = "environment_ce1_catacombs"
+		ambience = "event:/SFX/Events/Backgrounds/FP4/fp4_condemned_village"
 	}
 
 	window_characters = {
 		
 		guest = {
-			camera = camera_body_right
+			camera = camera_event_right
+
+			effect = {
+				
+			}
+
+			scripted_animation = {
+
+			}
+		}
+
+		host = {
+			camera = camera_event_center
 			
 			effect = {
 				if = {
 					limit = {
-						OR = {
-							scope:activity = { is_current_phase_active = yes }
-							AND = {
-								scope:host.location = scope:activity.activity_location
-								OR = {
-									scope:host = scope:activity.special_guest:spouse_1
-									scope:host = scope:activity.special_guest:spouse_2
-								}
-								scope:activity.special_guest:spouse_1.location ?= scope:activity.activity_location
-								scope:activity.special_guest:spouse_2.location ?= scope:activity.activity_location
-							}
-						}
+						scope:host.location = scope:activity.activity_location
 					}
-					if = {
-						limit = {
-							any_attending_character = {
-								count >= 2
-								location = scope:activity.activity_location
-								NOR = {
-									this = scope:host
-									this = scope:activity.special_guest:spouse_1
-									this = scope:activity.special_guest:spouse_2
-								}
-								OR = {
-									is_parent_of = scope:activity.special_guest:spouse_1
-									is_parent_of = scope:activity.special_guest:spouse_2
-									AND = {
-										exists = scope:activity.special_guest:spouse_2.court_owner
-										this = scope:activity.special_guest:spouse_2.court_owner
-									}
-									AND = {
-										exists = scope:activity.special_guest:spouse_1.court_owner
-										this = scope:activity.special_guest:spouse_1.court_owner
-									}
-								}
-							}
-						}
-						every_attending_character = {
-							limit = {
-								location = scope:activity.activity_location
-								NOR = {
-									this = scope:host
-									this = scope:activity.special_guest:spouse_1
-									this = scope:activity.special_guest:spouse_2
-								}
-								OR = {
-									is_parent_of = scope:activity.special_guest:spouse_1
-									is_parent_of = scope:activity.special_guest:spouse_2
-									AND = {
-										exists = scope:activity.special_guest:spouse_2.court_owner
-										this = scope:activity.special_guest:spouse_2.court_owner
-									}
-									AND = {
-										exists = scope:activity.special_guest:spouse_1.court_owner
-										this = scope:activity.special_guest:spouse_1.court_owner
-									}
-								}
-							}
-							add_to_list = characters
-						}
-					}
-					else = {
-						every_attending_character = {
-							limit = {
-								location = scope:activity.activity_location
-								NOR = {
-									this = scope:host
-									this = scope:activity.special_guest:spouse_1
-									this = scope:activity.special_guest:spouse_2
-								}
-							}
-							add_to_list = characters
-						}
+					scope:host = {
+						add_to_list = characters
 					}
 				}
 			}
@@ -3151,56 +1085,43 @@
 			scripted_animation = {
 				triggered_animation = {
 					trigger = {
-						always = yes
-					}
-					animation = { toast wedding_happy_cry wedding_drunk }
-				}
-				#Fallback
-				animation = toast
-			}
-		}
-		
-		host = {
-			camera = camera_body
-			
-			effect = {
-				if = {
-					limit = {
-						scope:activity = { is_current_phase_active = yes }
-						scope:host.location = scope:activity.activity_location
-						NOR = {
-							scope:host = scope:activity.special_guest:spouse_1
-							scope:host = scope:activity.special_guest:spouse_2
+						scope:body_to_bury = {
+							exists = killer
+							killer = root
 						}
 					}
-					scope:host = {
-						add_to_list = characters
-					}
-				}
-			}
-			scripted_animation = {
+					animation = eccentric
+				}				
 				triggered_animation = {
 					trigger = {
-						always = yes
+						scope:character.faith = {
+							has_doctrine_parameter = bewailment_funeral
+						}
 					}
-					animation = { admiration }
+					animation = { wailing grief boredom sadness stress crying }
 				}
+				triggered_animation = {
+					trigger = {
+						scope:character.faith = {
+							NOT = { has_doctrine_parameter = bewailment_funeral }
+						}
+					}
+					animation = { grief boredom sadness stress crying }
+				}
+
+				#Fallback
+				animation = grief
 			}
 		}
 		
 		travel_host = {
-			camera = camera_body
+			camera = camera_event_center
 			
 			effect = {
 				if = {
 					limit = {
-						scope:activity = { is_current_phase_active = no }
 						NOT = {
 							scope:host.location = scope:activity.activity_location
-						}
-						NOR = {
-							this = scope:activity.special_guest:spouse_1
-							this = scope:activity.special_guest:spouse_2
 						}
 					}
 					scope:host = {
@@ -3209,179 +1130,6 @@
 				}
 			}
 
-			scripted_animation = {
-				triggered_animation = {
-					trigger = {
-						scope:character.location = { is_sea_province = yes }
-					}
-					animation = { idle }
-				}
-				triggered_animation = {
-					trigger = { scope:character = { has_trait = impatient } }
-					animation = { jockey_gallop }
-				}
-				animation = jockey_walk
-			}
-		}
-		
-		officiant = {
-			camera = camera_body_right
-			
-			effect = {
-				if = {
-					limit = {
-						OR = {
-							scope:activity = { is_current_phase_active = yes }
-							AND = {
-								scope:host.location = scope:activity.activity_location
-								scope:activity.special_guest:spouse_1.location ?= scope:activity.activity_location
-								scope:activity.special_guest:spouse_2.location ?= scope:activity.activity_location
-							}
-						}
-						any_attending_character = {
-							location = scope:activity.activity_location
-							NOR = {
-								this = scope:host
-								this = scope:activity.special_guest:spouse_1
-								this = scope:activity.special_guest:spouse_2
-							}
-							has_character_flag = officiant
-						}
-					}
-					
-					every_attending_character = {
-						limit = {
-							location = scope:activity.activity_location
-							NOR = {
-								this = scope:host
-								this = scope:activity.special_guest:spouse_1
-								this = scope:activity.special_guest:spouse_2
-							}
-							has_character_flag = officiant
-						}
-						add_to_list = characters
-					}
-				}
-			}
-
-			scripted_animation = {
-				animation = wedding_priest
-			}
-		}
-		
-		spouse_1 = {
-			camera = camera_body
-			
-			effect = {
-				if = {
-					limit = {
-						OR = {
-							scope:activity = { is_current_phase_active = yes }
-							special_guest:spouse_1.location = scope:activity.activity_location
-						}
-						special_guest:spouse_1 = { is_alive = yes }
-					}
-					special_guest:spouse_1 = {
-						add_to_list = characters
-					}
-				}
-			}
-			scripted_animation = {
-				triggered_animation = {
-					trigger = {
-						special_guest:spouse_2 = { is_alive = yes }
-						OR = {
-							special_guest:spouse_2.location = scope:activity.activity_location
-							scope:activity = { is_current_phase_active = yes }
-						}
-					}
-					animation = reception_groom_left
-				}
-				animation = idle
-			}
-		}
-		
-		travel_spouse_1 = {
-			camera = camera_body
-			
-			effect = {
-				if = {
-					limit = {
-						scope:activity = { is_current_phase_active = no }
-						NOT = {
-							special_guest:spouse_1.location = scope:activity.activity_location
-						}
-						special_guest:spouse_1 = { is_alive = yes }
-					}
-					special_guest:spouse_1 = {
-						add_to_list = characters
-					}
-				}
-			}
-			scripted_animation = {
-				triggered_animation = {
-					trigger = {
-						scope:character.location = { is_sea_province = yes }
-					}
-					animation = { idle }
-				}
-				triggered_animation = {
-					trigger = { scope:character = { has_trait = impatient } }
-					animation = { jockey_gallop }
-				}
-				animation = jockey_walk
-			}
-		}
-
-		spouse_2 = {
-			camera = camera_body
-			
-			effect = {
-				if = {
-					limit = {
-						OR = {
-							scope:activity = { is_current_phase_active = yes }
-							special_guest:spouse_2.location = scope:activity.activity_location
-						}
-						special_guest:spouse_2 = { is_alive = yes }
-					}
-					special_guest:spouse_2 = {
-						add_to_list = characters
-					}
-				}
-			}
-			scripted_animation = {
-				triggered_animation = {
-					trigger = {
-						special_guest:spouse_1 = { is_alive = yes }
-						OR = {
-							special_guest:spouse_1.location = scope:activity.activity_location
-							scope:activity = { is_current_phase_active = yes }
-						}
-					}
-					animation = reception_bride_right
-				}
-				animation = idle
-			}
-		}
-
-		travel_spouse_2 = {
-			camera = camera_body
-			
-			effect = {
-				if = {
-					limit = {
-						scope:activity = { is_current_phase_active = no }
-						NOT = {
-							special_guest:spouse_2 = { is_alive = no }
-							special_guest:spouse_2.location = scope:activity.activity_location
-						}
-					}
-					special_guest:spouse_2 = {
-						add_to_list = characters
-					}
-				}
-			}
 			scripted_animation = {
 				triggered_animation = {
 					trigger = {
@@ -3398,94 +1146,436 @@
 		}
 		
 		guest = {
-			camera = camera_body_left
+			camera = camera_event_left
 			
 			effect = {
-				if = {
-					limit = {
-						OR = {
-							scope:activity = { is_current_phase_active = yes }
-							AND = {
-								scope:host.location = scope:activity.activity_location
-								scope:activity.special_guest:spouse_1.location ?= scope:activity.activity_location
-								scope:activity.special_guest:spouse_2.location ?= scope:activity.activity_location
-							}
-						}
-					}
-					
-					if = {
-						limit = {
-							any_attending_character = {
-								location = scope:activity.activity_location
-								NOR = {
-									this = scope:host
-									this = scope:activity.special_guest:spouse_1
-									this = scope:activity.special_guest:spouse_2
-								}
-								OR = {
-									is_parent_of = scope:activity.special_guest:spouse_1
-									is_parent_of = scope:activity.special_guest:spouse_2
-									AND = {
-										exists = scope:activity.special_guest:spouse_2.court_owner
-										this = scope:activity.special_guest:spouse_2.court_owner
-									}
-									AND = {
-										exists = scope:activity.special_guest:spouse_1.court_owner
-										this = scope:activity.special_guest:spouse_1.court_owner
-									}
-								}
-							}
-						}
-						every_attending_character = {
-							limit = {
-								location = scope:activity.activity_location
-								NOR = {
-									this = scope:host
-									this = scope:activity.special_guest:spouse_1
-									this = scope:activity.special_guest:spouse_2
-								}
-								OR = {
-									is_parent_of = scope:activity.special_guest:spouse_1
-									is_parent_of = scope:activity.special_guest:spouse_2
-									AND = {
-										exists = scope:activity.special_guest:spouse_2.court_owner
-										this = scope:activity.special_guest:spouse_2.court_owner
-									}
-									AND = {
-										exists = scope:activity.special_guest:spouse_1.court_owner
-										this = scope:activity.special_guest:spouse_1.court_owner
-									}
-								}
-							}
-							add_to_list = characters
-						}
-					}
-					else = {
-						every_attending_character = {
-							limit = {
-								location = scope:activity.activity_location
-								NOR = {
-									this = scope:host
-									this = scope:activity.special_guest:spouse_1
-									this = scope:activity.special_guest:spouse_2
-								}
-							}
-							add_to_list = characters
-						}
-					}
+				every_attending_character = {
+					add_to_list = characters
 				}
 			}
 
 			scripted_animation = {
 				triggered_animation = {
 					trigger = {
-						always = yes
+						scope:character.faith = {
+							has_doctrine_parameter = bewailment_funeral
+						}
 					}
-					animation = { toast wedding_happy_cry wedding_drunk }
+					animation = { wailing grief boredom sadness stress crying }
+				}
+				triggered_animation = {
+					trigger = {
+						scope:character.faith = {
+							NOT = { has_doctrine_parameter = bewailment_funeral }
+						}
+					}
+					animation = { grief boredom sadness stress crying }
 				}
 				#Fallback
-				animation = toast
+				animation = grief
 			}
 		}
+
+		guest = {
+			camera = camera_event_center
+			
+			effect = {
+				every_attending_character = {
+					add_to_list = characters
+				}
+			}
+
+			scripted_animation = {
+				triggered_animation = {
+					trigger = {
+						scope:character.faith = {
+							has_doctrine_parameter = bewailment_funeral
+						}
+					}
+					animation = { wailing grief boredom sadness stress crying }
+				}
+				triggered_animation = {
+					trigger = {
+						scope:character.faith = {
+							NOT = { has_doctrine_parameter = bewailment_funeral }
+						}
+					}
+					animation = { grief boredom sadness stress crying }
+				}
+				#Fallback
+				animation = grief
+			}
+		}
+		
+		body = {
+			camera = camera_event_center
+			
+			effect = {
+				if = {
+					limit = {
+						exists = scope:activity.var:body_to_bury
+					}
+					scope:activity.var:body_to_bury = {
+						add_to_list = characters
+					}
+				}
+			}
+
+			scripted_animation = {
+				animation = dead
+			}
+		}
+	}
+
+	###################
+	# OPTIONS
+	###################
+
+	options = {
+		# How much do you spend on pomp and fancy stuff at the funeral?
+
+		# How much do you spend on the religious ceremony?
+		funeral_option_ceremony = {
+			funeral_ceremony_bad = {
+				is_shown = { has_dlc_feature = advanced_activities }
+
+				ai_will_do = {
+					value = 0
+					# Financial preference.
+					add = activity_option_likes_cheap_expense_value
+					# Quantity preference.
+					add = activity_option_food_prefers_small_volume_value
+				}
+			}
+			funeral_ceremony_normal = {
+				default = yes
+	
+				cost = {
+					gold = {
+						add = {
+							value = 0
+							desc = funeral_ceremony_normal
+							add = {
+								value = 10
+								desc = funeral_ceremony_normal
+							}
+							add = {
+								value = 10
+								multiply = activity_cost_scale_by_tier
+								subtract = 10
+								desc = activity_cost_scale_by_tier_desc
+							}
+							add = {
+								value = 10
+								multiply = activity_cost_scale_by_era
+								subtract = 10
+								desc = activity_cost_scale_by_era_desc
+							}
+							if = {
+								limit = {
+									dynasty ?= {
+										has_dynasty_perk = law_legacy_1
+									}
+								}
+								subtract = {
+									value = 10
+									add = {
+										value = 10
+										multiply = activity_cost_scale_by_tier
+										subtract = 10
+									}
+									add = {
+										value = 10
+										multiply = activity_cost_scale_by_era
+										subtract = 10
+									}
+									multiply = law_legacy_cost_reduction_mult
+									desc = law_legacy_1_name
+								}
+							}
+						}
+					}
+				}
+
+				ai_will_do = {
+					value = 0
+					# Financial preference.
+					add = activity_option_likes_middling_expense_value
+					# Quantity preference.
+					## We just use slightly reduced quantity prefs here.
+					add = {
+						value = activity_option_prefers_large_volume_value
+						multiply = 0.5
+					}
+				}
+			}
+			funeral_ceremony_good = {
+				is_shown = { has_dlc_feature = advanced_activities }
+
+				cost = {
+					gold = {
+						add = {
+							value = 0
+							desc = funeral_ceremony_good
+							add = {
+								value = 35
+								desc = funeral_ceremony_good
+							}
+							add = {
+								value = 35
+								multiply = activity_cost_scale_by_tier
+								subtract = 35
+								desc = activity_cost_scale_by_tier_desc
+							}
+							add = {
+								value = 35
+								multiply = activity_cost_scale_by_era
+								subtract = 35
+								desc = activity_cost_scale_by_era_desc
+							}
+							if = {
+								limit = {
+									dynasty ?= {
+										has_dynasty_perk = law_legacy_1
+									}
+								}
+								subtract = {
+									value = 35
+									add = {
+										value = 35
+										multiply = activity_cost_scale_by_tier
+										subtract = 35
+									}
+									add = {
+										value = 35
+										multiply = activity_cost_scale_by_era
+										subtract = 35
+									}
+									multiply = law_legacy_cost_reduction_mult
+									desc = law_legacy_1_name
+								}
+							}
+						}
+					}
+				}
+
+				ai_will_do = {
+					value = 0
+					# Financial preference.
+					add = activity_option_likes_heavy_expense_value
+					# Quantity preference.
+					add = activity_option_prefers_large_volume_value
+				}
+			}
+		}
+	}
+
+	###################
+	# PHASES
+	###################
+
+	max_guest_arrival_delay_time = { months = 8 }
+
+	phases = {
+		# Mingling and socialising
+		funeral_phase_wake = {
+			order = 1
+			is_predefined = yes
+
+			is_shown = { always = yes }
+
+			on_phase_active = {
+				# Sort some stuff on the host.
+				if = {
+					limit = { this = scope:host }
+
+					scope:activity = { progress_activity_phase_after = { months = 3 } }
+				}
+			}
+			
+			on_weekly_pulse = {
+				scope:activity.var:body_to_bury = { save_scope_as = deceased }
+				root.involved_activity = { save_scope_as = activity }
+				trigger_event = { on_action = funeral_wake_pulse }
+			}
+		}
+
+		# The funeral ceremony itself
+		funeral_phase_ceremony = {
+			order = 2
+			is_predefined = yes
+
+			on_enter_phase = {
+				if = {
+					limit = { this = scope:host }
+
+					# No passive state for the toast, just jump right into it
+					scope:activity = { progress_activity_phase_after = { days = 5 } }
+				}
+			}
+
+			on_phase_active = {
+				if = {
+					limit = { this = scope:host }
+					scope:activity = { save_scope_as = activity }
+					trigger_event = funeral.0100
+					scope:activity = { progress_activity_phase_after = { weeks = 1 } }
+				}
+			}
+		}
+	}
+
+	ai_check_interval = 60
+
+	ai_will_select_province = {
+		# Base
+		value = 0
+		# BUILDINGS
+		# Triple good / +++
+		if = { # Has a big cool temple of your faith
+			limit = {
+				barony = {
+					is_holy_site_of = scope:host.faith
+				}
+				has_holy_building = yes
+			}
+			add = {
+				value = @weight_up_ai_select_province_large
+				desc = activity_funeral_major_religious_building
+			}
+		}
+		if = { # Has a tower of silence
+			limit = {
+				has_building_or_higher = tower_of_silence_01
+			}
+			add = {
+				value = @weight_up_ai_select_province_large
+				desc = activity_funeral_tos
+			}
+		}
+		# Double good / ++
+		if = {
+			limit = {
+				barony = {
+					is_holy_site_of = scope:host.faith
+				}
+			}
+			add = {
+				value = @weight_up_ai_select_province_medium
+				desc = activity_funeral_holy_site
+			}
+		}
+		# Things your religion values
+		if = {
+			limit = {
+				scope:host.faith = { has_doctrine_parameter = sky_burials_active }
+				is_mountainous_trigger = yes
+			}
+			add = {
+				value = @weight_up_ai_select_province_medium
+				desc = activity_funeral_mountain
+			}
+		}
+		# Good / +
+		if = {
+			limit = {
+				has_building_or_higher = temple_01
+				faith.religion = scope:host.faith.religion
+			}
+			add = {
+				value = @weight_up_ai_select_province_small
+				desc = activity_funeral_temple
+			}
+		}
+	}
+
+	###################
+	# ACTIVITY-SPECIFIC PULSES
+	###################
+	
+	pulse_actions = {
+		entries = {
+			spouse_skill_diplomacy_improves spouse_gives_host_prestige spouse_impresses_clergy spouse_gives_hook
+			relation_gains_friend children_bonding hook_trusting_guest guest_tells_fantastic_joke
+			excellent_food lauded_food guest_impressed_by_court_artifact friend_lauds_efforts courtly_vassals_appeased impressed_courtly_vassal
+			guest_of_honor_praised
+			guest_chokes_on_bone guest_brawl spouse_insults_host ridiculed_food
+			host_gains_diplo_xp host_gains_steward_xp host_gains_intrigue_xp
+			good_kitty good_puppy antiquarian_admires_artifact jester_entertained_guests apa_executioner
+		}
+		chance_of_no_event = 5
+	}
+	
+	on_start = {
+		if = {
+			limit = {
+				scope:host = {
+					is_ai = yes
+				}
+			}
+			scope:host = {
+				funeral_add_funeral_targets_to_list = {
+                    LIST_NAME = funeral_activity_targets
+                }
+				random_in_list = {
+					variable = funeral_activity_targets
+					save_scope_as = body_to_bury
+				}
+				clear_variable_list = funeral_activity_targets
+			}
+			set_variable = {
+				name = body_to_bury
+				value = scope:body_to_bury
+			}
+		}
+		random = {
+			chance = 5
+			set_variable = {
+				name = incorrupt_body
+				value = yes
+				years = 5
+			}
+		}
+		scope:activity.var:body_to_bury = {
+			set_dead_character_variable = {
+				name = body_has_been_disposed
+				value = yes
+				years = 5
+			}
+		}
+	}
+	
+	on_enter_passive_state = {
+		trigger_event = funeral.0010
+	}
+
+	# Effects run when the activity completes after its last phase
+	# root = character in this phase
+	# scope:activity = the activity
+	# scope:host = host of the activity
+	on_complete = {
+		if = {
+			limit = {
+				is_ai = no
+				exists = promoted_legend
+				promoted_legend = {
+					legend_protagonist = scope:activity.var:body_to_bury
+				}
+			}
+			add_achievement_global_variable_effect = {
+				VARIABLE = ce1_f_achievement_unlocked
+				VALUE = yes
+			}
+		}
+	}
+
+	activity_planner_widgets = {
+		funeral_deceased_selection_button = "activity_options_plugins"
+		funeral_deceased_selection_widget = "activity_plugin_center"
+	}
+
+	activity_window_widgets = {
+		funeral_deceased_portrait = "activity_top_layer_event_widgets"
+		funeral_deceased_portrait = "activity_top_layer_idle_widgets"
 	}
 }
