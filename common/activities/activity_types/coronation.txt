@@ -36,7 +36,7 @@ activity_coronation = {
 			limit = {
 				is_ai = yes
 			}
-			has_available_funeral_target = yes
+			# has_available_funeral_target = yes
 		}
 	}
 
