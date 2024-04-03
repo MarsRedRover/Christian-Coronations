@@ -3,20 +3,20 @@
 @weight_up_ai_select_province_large = 250
 @weight_up_ai_select_province_massive = 500
 
-@coronation_cost_gold_low = tiny_gold_value
-@coronation_cost_gold_medium = medium_gold_value
-@coronation_cost_gold_high = major_gold_value
+@funeral_cost_gold_low = tiny_gold_value
+@funeral_cost_gold_medium = medium_gold_value
+@funeral_cost_gold_high = major_gold_value
 
-activity_coronation = {
+activity_funeral = {
 	is_shown = {
-		highest_held_title_tier >= tier_kingdom
+		highest_held_title_tier > tier_barony
 		is_landed = yes
 		trigger_if = {
 			limit = {
 				is_ai = yes
 			}
 			is_at_war = no
-			short_term_gold >= coronation_activity_cost
+			short_term_gold >= funeral_activity_cost
 		}
 		has_ce1_dlc_trigger = yes
 	}
@@ -36,7 +36,7 @@ activity_coronation = {
 			limit = {
 				is_ai = yes
 			}
-			# has_available_funeral_target = yes
+			has_available_funeral_target = yes
 		}
 	}
 
@@ -106,7 +106,7 @@ activity_coronation = {
 	is_grand_activity = no
 	is_single_location = yes
 
-	province_filter = capital
+	province_filter = realm
 	ai_province_filter = capital
 
 	max_route_deviation_mult = 2.0
@@ -116,7 +116,7 @@ activity_coronation = {
 	}
 
 	province_description = {
-		desc = activity_coronation_province_desc
+		desc = activity_funeral_province_desc
 		# +++ / triple plus good
 		# Triple good / +++
 		triggered_desc = { # Has a big cool temple of your faith
@@ -161,7 +161,7 @@ activity_coronation = {
 		}
 	}
 
-	max_province_icons = 1
+	max_province_icons = 5
 
 	province_score = {
 		value = 0
