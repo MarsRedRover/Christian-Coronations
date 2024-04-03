@@ -3,11 +3,11 @@
 @weight_up_ai_select_province_large = 250
 @weight_up_ai_select_province_massive = 500
 
-@funeral_cost_gold_low = tiny_gold_value
-@funeral_cost_gold_medium = medium_gold_value
-@funeral_cost_gold_high = major_gold_value
+@coronation_cost_gold_low = tiny_gold_value
+@coronation_cost_gold_medium = medium_gold_value
+@coronation_cost_gold_high = major_gold_value
 
-activity_funeral = {
+activity_coronation = {
 	is_shown = {
 		highest_held_title_tier > tier_barony
 		is_landed = yes
@@ -16,7 +16,7 @@ activity_funeral = {
 				is_ai = yes
 			}
 			is_at_war = no
-			short_term_gold >= funeral_activity_cost
+			short_term_gold >= coronation_activity_cost
 		}
 		has_ce1_dlc_trigger = yes
 	}
@@ -36,14 +36,14 @@ activity_funeral = {
 			limit = {
 				is_ai = yes
 			}
-			has_available_funeral_target = yes
+			has_available_coronation_target = yes
 		}
 	}
 
 	can_start = {
 		custom_tooltip = {
 			text = has_someone_to_bury_tt
-			has_available_funeral_target = yes
+			has_available_coronation_target = yes
 		}
 	}
 
@@ -83,7 +83,7 @@ activity_funeral = {
 			scope:new_host = {
 				primary_title = { save_scope_as = host_title }
 				trigger_event = {
-					id = funeral.0002
+					id = coronation.0002
 					days = 1
 				}
 			}
@@ -92,7 +92,7 @@ activity_funeral = {
 			every_attending_character = {
 				limit = { is_alive = yes }
 				trigger_event = {
-					id = funeral.0001
+					id = coronation.0001
 					days = 1 # So you don't get spammed
 				}
 			}
@@ -116,7 +116,7 @@ activity_funeral = {
 	}
 
 	province_description = {
-		desc = activity_funeral_province_desc
+		desc = activity_coronation_province_desc
 		# +++ / triple plus good
 		# Triple good / +++
 		triggered_desc = { # Has a big cool temple of your faith
@@ -126,13 +126,13 @@ activity_funeral = {
 				}
 				has_holy_building = yes
 			}
-			desc = activity_funeral_major_religious_building
+			desc = activity_coronation_major_religious_building
 		}
 		triggered_desc = { # Has a tower of silence
 			trigger = {
 				has_building_or_higher = tower_of_silence_01
 			}
-			desc = activity_funeral_tos
+			desc = activity_coronation_tos
 		}
 		# Double good / ++
 		triggered_desc = {
@@ -141,7 +141,7 @@ activity_funeral = {
 					is_holy_site_of = scope:host.faith
 				}
 			}
-			desc = activity_funeral_holy_site
+			desc = activity_coronation_holy_site
 		}
 		# Things your religion values
 		triggered_desc = {
@@ -149,7 +149,7 @@ activity_funeral = {
 				scope:host.faith = { has_doctrine_parameter = sky_burials_active }
 				is_mountainous_trigger = yes
 			}
-			desc = activity_funeral_mountain
+			desc = activity_coronation_mountain
 		}
 		# Good / +
 		triggered_desc = {
@@ -157,7 +157,7 @@ activity_funeral = {
 				has_building_or_higher = temple_01
 				faith.religion = scope:host.faith.religion
 			}
-			desc = activity_funeral_temple
+			desc = activity_coronation_temple
 		}
 	}
 
@@ -209,7 +209,7 @@ activity_funeral = {
 		}
 	}
 
-	cooldown = { years = standard_funeral_cooldown_time }
+	cooldown = { years = standard_coronation_cooldown_time }
 
 	# desc is only shown in debug AI watch window
 	ai_will_do = {
@@ -266,7 +266,7 @@ activity_funeral = {
 		}
 		if = {
 			limit = {
-				short_term_gold >= funeral_activity_cost
+				short_term_gold >= coronation_activity_cost
 				short_term_gold >= major_gold_value
 			}
 			add = {
@@ -609,15 +609,15 @@ activity_funeral = {
 		gold = {
 			add = {
 				value = 0
-				desc = funeral_activity_cost_desc
+				desc = coronation_activity_cost_desc
 				add = {
-					value = funeral_activity_cost
-					desc = funeral_activity_cost_desc
+					value = coronation_activity_cost
+					desc = coronation_activity_cost_desc
 				}
 				add = {
-					value = funeral_activity_cost
+					value = coronation_activity_cost
 					multiply = activity_cost_scale_by_era
-					subtract = funeral_activity_cost
+					subtract = coronation_activity_cost
 					desc = activity_cost_scale_by_era_desc
 				}
 				if = {
@@ -634,36 +634,36 @@ activity_funeral = {
 						}
 					}
 					add = {
-						value = funeral_activity_cost
-						multiply = funeral_activity_cost_increase_max
-						subtract = funeral_activity_cost
-						desc = funeral_cost_increase_great_temple
+						value = coronation_activity_cost
+						multiply = coronation_activity_cost_increase_max
+						subtract = coronation_activity_cost
+						desc = coronation_cost_increase_great_temple
 					}
 				}
 				if = {
 					limit = {
 						root ?= {
-							faith = { has_doctrine_parameter = mummification_funeral }
+							faith = { has_doctrine_parameter = mummification_coronation }
 						}
 					}
 					add = {
-						value = funeral_activity_cost
+						value = coronation_activity_cost
 						multiply = 2
-						subtract = funeral_activity_cost
-						desc = funeral_cost_increase_mummification
+						subtract = coronation_activity_cost
+						desc = coronation_cost_increase_mummification
 					}
 				}
 				if = {
 					limit = {
 						root ?= {
-							faith = { has_doctrine_parameter = cremation_funeral }
+							faith = { has_doctrine_parameter = cremation_coronation }
 						}
 					}
 					add = {
-						value = funeral_activity_cost
-						multiply = funeral_activity_cost_discount_max
-						subtract = funeral_activity_cost
-						desc = funeral_cost_discount_cremation
+						value = coronation_activity_cost
+						multiply = coronation_activity_cost_discount_max
+						subtract = coronation_activity_cost
+						desc = coronation_cost_discount_cremation
 					}
 				}
 			}
@@ -674,7 +674,7 @@ activity_funeral = {
 		# All costs are balanced on County/Early Era starting point
 		gold = {
 			add = { # Base Cost, scaled by era
-				value = funeral_activity_cost
+				value = coronation_activity_cost
 				multiply = activity_cost_scale_by_era
 			}
 			add = { # Ceremony 
@@ -693,7 +693,7 @@ activity_funeral = {
 				# Divide by 3 (num of levels for this option) so we get the average option cost
 				divide = 3
 			}
-			save_temporary_value_as = pre_discount_funeral_cost_ui
+			save_temporary_value_as = pre_discount_coronation_cost_ui
 			if = {
 				limit = {
 					dynasty ?= {
@@ -701,7 +701,7 @@ activity_funeral = {
 					}
 				}
 				subtract = {
-					value = scope:pre_discount_funeral_cost_ui
+					value = scope:pre_discount_coronation_cost_ui
 					multiply = law_legacy_cost_reduction_mult
 				}
 			}
@@ -1040,12 +1040,12 @@ activity_funeral = {
 			exists = scope:host
 			scope:host = {
 				faith = {
-					has_doctrine_parameter = cremation_funeral
+					has_doctrine_parameter = cremation_coronation
 				}
 			}
 		}
-		texture = "gfx/interface/illustrations/event_scenes/fp4_funeral_pyre.dds"
-		environment = "environment_ce1_funeral_pyre"
+		texture = "gfx/interface/illustrations/event_scenes/fp4_coronation_pyre.dds"
+		environment = "environment_ce1_coronation_pyre"
 		ambience = "event:/SFX/Events/Backgrounds/FP4/fp4_epidemic_corpsecarts"
 	}
 	background = {
@@ -1095,7 +1095,7 @@ activity_funeral = {
 				triggered_animation = {
 					trigger = {
 						scope:character.faith = {
-							has_doctrine_parameter = bewailment_funeral
+							has_doctrine_parameter = bewailment_coronation
 						}
 					}
 					animation = { wailing grief boredom sadness stress crying }
@@ -1103,7 +1103,7 @@ activity_funeral = {
 				triggered_animation = {
 					trigger = {
 						scope:character.faith = {
-							NOT = { has_doctrine_parameter = bewailment_funeral }
+							NOT = { has_doctrine_parameter = bewailment_coronation }
 						}
 					}
 					animation = { grief boredom sadness stress crying }
@@ -1158,7 +1158,7 @@ activity_funeral = {
 				triggered_animation = {
 					trigger = {
 						scope:character.faith = {
-							has_doctrine_parameter = bewailment_funeral
+							has_doctrine_parameter = bewailment_coronation
 						}
 					}
 					animation = { wailing grief boredom sadness stress crying }
@@ -1166,7 +1166,7 @@ activity_funeral = {
 				triggered_animation = {
 					trigger = {
 						scope:character.faith = {
-							NOT = { has_doctrine_parameter = bewailment_funeral }
+							NOT = { has_doctrine_parameter = bewailment_coronation }
 						}
 					}
 					animation = { grief boredom sadness stress crying }
@@ -1189,7 +1189,7 @@ activity_funeral = {
 				triggered_animation = {
 					trigger = {
 						scope:character.faith = {
-							has_doctrine_parameter = bewailment_funeral
+							has_doctrine_parameter = bewailment_coronation
 						}
 					}
 					animation = { wailing grief boredom sadness stress crying }
@@ -1197,7 +1197,7 @@ activity_funeral = {
 				triggered_animation = {
 					trigger = {
 						scope:character.faith = {
-							NOT = { has_doctrine_parameter = bewailment_funeral }
+							NOT = { has_doctrine_parameter = bewailment_coronation }
 						}
 					}
 					animation = { grief boredom sadness stress crying }
@@ -1232,11 +1232,11 @@ activity_funeral = {
 	###################
 
 	options = {
-		# How much do you spend on pomp and fancy stuff at the funeral?
+		# How much do you spend on pomp and fancy stuff at the coronation?
 
 		# How much do you spend on the religious ceremony?
-		funeral_option_ceremony = {
-			funeral_ceremony_bad = {
+		coronation_option_ceremony = {
+			coronation_ceremony_bad = {
 				is_shown = { has_dlc_feature = advanced_activities }
 
 				ai_will_do = {
@@ -1247,17 +1247,17 @@ activity_funeral = {
 					add = activity_option_food_prefers_small_volume_value
 				}
 			}
-			funeral_ceremony_normal = {
+			coronation_ceremony_normal = {
 				default = yes
 	
 				cost = {
 					gold = {
 						add = {
 							value = 0
-							desc = funeral_ceremony_normal
+							desc = coronation_ceremony_normal
 							add = {
 								value = 10
-								desc = funeral_ceremony_normal
+								desc = coronation_ceremony_normal
 							}
 							add = {
 								value = 10
@@ -1309,17 +1309,17 @@ activity_funeral = {
 					}
 				}
 			}
-			funeral_ceremony_good = {
+			coronation_ceremony_good = {
 				is_shown = { has_dlc_feature = advanced_activities }
 
 				cost = {
 					gold = {
 						add = {
 							value = 0
-							desc = funeral_ceremony_good
+							desc = coronation_ceremony_good
 							add = {
 								value = 35
-								desc = funeral_ceremony_good
+								desc = coronation_ceremony_good
 							}
 							add = {
 								value = 35
@@ -1378,7 +1378,7 @@ activity_funeral = {
 
 	phases = {
 		# Mingling and socialising
-		funeral_phase_wake = {
+		coronation_phase_wake = {
 			order = 1
 			is_predefined = yes
 
@@ -1396,12 +1396,12 @@ activity_funeral = {
 			on_weekly_pulse = {
 				scope:activity.var:body_to_bury = { save_scope_as = deceased }
 				root.involved_activity = { save_scope_as = activity }
-				trigger_event = { on_action = funeral_wake_pulse }
+				trigger_event = { on_action = coronation_wake_pulse }
 			}
 		}
 
-		# The funeral ceremony itself
-		funeral_phase_ceremony = {
+		# The coronation ceremony itself
+		coronation_phase_ceremony = {
 			order = 2
 			is_predefined = yes
 
@@ -1418,7 +1418,7 @@ activity_funeral = {
 				if = {
 					limit = { this = scope:host }
 					scope:activity = { save_scope_as = activity }
-					trigger_event = funeral.0100
+					trigger_event = coronation.0100
 					scope:activity = { progress_activity_phase_after = { weeks = 1 } }
 				}
 			}
@@ -1441,7 +1441,7 @@ activity_funeral = {
 			}
 			add = {
 				value = @weight_up_ai_select_province_large
-				desc = activity_funeral_major_religious_building
+				desc = activity_coronation_major_religious_building
 			}
 		}
 		if = { # Has a tower of silence
@@ -1450,7 +1450,7 @@ activity_funeral = {
 			}
 			add = {
 				value = @weight_up_ai_select_province_large
-				desc = activity_funeral_tos
+				desc = activity_coronation_tos
 			}
 		}
 		# Double good / ++
@@ -1462,7 +1462,7 @@ activity_funeral = {
 			}
 			add = {
 				value = @weight_up_ai_select_province_medium
-				desc = activity_funeral_holy_site
+				desc = activity_coronation_holy_site
 			}
 		}
 		# Things your religion values
@@ -1473,7 +1473,7 @@ activity_funeral = {
 			}
 			add = {
 				value = @weight_up_ai_select_province_medium
-				desc = activity_funeral_mountain
+				desc = activity_coronation_mountain
 			}
 		}
 		# Good / +
@@ -1484,7 +1484,7 @@ activity_funeral = {
 			}
 			add = {
 				value = @weight_up_ai_select_province_small
-				desc = activity_funeral_temple
+				desc = activity_coronation_temple
 			}
 		}
 	}
@@ -1514,14 +1514,14 @@ activity_funeral = {
 				}
 			}
 			scope:host = {
-				funeral_add_funeral_targets_to_list = {
-                    LIST_NAME = funeral_activity_targets
+				coronation_add_coronation_targets_to_list = {
+                    LIST_NAME = coronation_activity_targets
                 }
 				random_in_list = {
-					variable = funeral_activity_targets
+					variable = coronation_activity_targets
 					save_scope_as = body_to_bury
 				}
-				clear_variable_list = funeral_activity_targets
+				clear_variable_list = coronation_activity_targets
 			}
 			set_variable = {
 				name = body_to_bury
@@ -1546,7 +1546,7 @@ activity_funeral = {
 	}
 	
 	on_enter_passive_state = {
-		trigger_event = funeral.0010
+		trigger_event = coronation.0010
 	}
 
 	# Effects run when the activity completes after its last phase
@@ -1570,12 +1570,12 @@ activity_funeral = {
 	}
 
 	activity_planner_widgets = {
-		funeral_deceased_selection_button = "activity_options_plugins"
-		funeral_deceased_selection_widget = "activity_plugin_center"
+		coronation_deceased_selection_button = "activity_options_plugins"
+		coronation_deceased_selection_widget = "activity_plugin_center"
 	}
 
 	activity_window_widgets = {
-		funeral_deceased_portrait = "activity_top_layer_event_widgets"
-		funeral_deceased_portrait = "activity_top_layer_idle_widgets"
+		coronation_deceased_portrait = "activity_top_layer_event_widgets"
+		coronation_deceased_portrait = "activity_top_layer_idle_widgets"
 	}
 }
